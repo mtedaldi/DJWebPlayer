@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>DJWebPlayer</title>
+  <meta name="theme-color" content="#15171c">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>DJWebPlayer</h1>
+  </header>
+
+  <main>
+    <section class="deck-panel" aria-label="Deck">
+      <div id="deck-track-name" class="deck-track-name is-empty"></div>
+
+      <div id="deck-progress" class="deck-progress" role="slider" aria-label="Seek">
+        <div id="deck-progress-fill" class="deck-progress-fill"></div>
+      </div>
+
+      <div class="deck-times">
+        <span id="deck-current-time">0:00</span>
+        <span id="deck-duration">0:00</span>
+      </div>
+
+      <div class="deck-controls">
+        <button id="deck-play" class="is-primary"></button>
+        <button id="deck-stop"></button>
+        <div class="deck-volume">
+          <span>Vol</span>
+          <input id="deck-volume-slider" type="range" min="0" max="1" step="0.01" value="0.8">
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Library">
+      <h2 id="library-title"></h2>
+      <div class="panel-actions">
+        <button id="library-import-folder"></button>
+        <button id="library-import-files"></button>
+      </div>
+      <input id="folder-input" type="file" webkitdirectory hidden>
+      <input id="file-input" type="file" accept="audio/*" multiple hidden>
+      <p id="library-empty" class="empty-hint"></p>
+      <ul id="library-list" class="item-list"></ul>
+    </section>
+
+    <section class="panel" aria-label="Playlist">
+      <h2 id="playlist-title"></h2>
+      <p id="playlist-empty" class="empty-hint"></p>
+      <ul id="playlist-list" class="item-list"></ul>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
