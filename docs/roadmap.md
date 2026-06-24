@@ -66,6 +66,15 @@ order relative to v0.2+.
   is structured once tested
 - Multi-select removal of tracks from the library (not just one at a
   time)
+- Duplicate detection on import: skip files matching an existing library
+  entry by filename + file size (fast heuristic, not a content hash);
+  skipped duplicates are silently ignored
+- "Clear library" action (with confirmation prompt)
+- "Clear playlist" action (with confirmation prompt)
+- "Reset app" action: wipes all local storage (library, playlist,
+  settings) and reinitializes — useful both during development and for
+  resetting a tablet between events; confirmation prompt required, kept
+  visually separate from regular actions ("danger zone")
 
 **Goal:** A library of real-world size (hundreds of tracks) stays usable.
 

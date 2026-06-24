@@ -57,6 +57,14 @@ and a soundboard for sound effects.
 - FR-1.6: User can filter/search the library by track name
 - FR-1.7: User can select and remove multiple tracks from the library at
   once, not only one at a time
+- FR-1.8: User can clear the entire library in one action, with a
+  confirmation prompt
+- FR-1.9: Import skips files that already exist in the library, detected
+  by filename + file size match. Skipped duplicates are silently ignored
+  (not added again, no error shown). This is a fast heuristic, not a
+  content hash — two different files that happen to share both name and
+  size would be treated as duplicates; deemed an acceptable trade-off for
+  speed and simplicity.
 
 ### 3.2 Playlist
 
@@ -67,6 +75,8 @@ and a soundboard for sound effects.
 - FR-2.4: Playlist playback automatically advances to the next track
 - FR-2.5: Transition between playlist tracks uses the configured automatic
   crossfade duration
+- FR-2.6: User can clear the entire playlist in one action, with a
+  confirmation prompt
 
 ### 3.3 Decks
 
@@ -128,6 +138,14 @@ and a soundboard for sound effects.
 - FR-8.3: Architecture allows adding further languages (e.g. German) without
   structural changes
 
+### 3.9 App reset
+
+- FR-9.1: User can trigger a full app reset that wipes all local storage
+  (library, playlist, soundboard sounds once they exist, settings) and
+  reinitializes the app to a fresh state
+- FR-9.2: Reset requires explicit confirmation and is visually separated
+  from regular actions to avoid accidental use
+
 ## 4. Non-functional requirements
 
 - NFR-1: Runs in modern evergreen browsers (Chrome/Edge primary target;
@@ -152,6 +170,10 @@ and a soundboard for sound effects.
 - Long-term: possible BPM-aware crossfade timing
 - Whether the library view should be flat or hierarchical (e.g. grouped
   by folder/artist) — undecided, see roadmap v0.1.2
+- Whether to store the relative folder path (`webkitRelativePath`)
+  alongside each track — would help distinguish same-named files from
+  different folders, and feeds into the flat-vs-hierarchical decision
+  above; not yet decided
 
 ## 6. References
 
