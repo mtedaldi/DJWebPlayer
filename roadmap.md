@@ -31,6 +31,28 @@ through unattended on a tablet, fully offline.
 
 ---
 
+## v0.1.1 — Bugfix patch (post-test fixes)
+
+Issues found during first real-world test on Firefox/tablet:
+
+- Fix folder import: don't rely solely on `file.type` (often empty for
+  `.m4a`/`.flac` in some browsers) — also accept by file extension, so
+  recursive folder imports (e.g. importing a whole artist folder with
+  multiple album subfolders) pick up all audio files
+- Add explicit "Skip to next" control — there was no way to manually
+  advance to the next playlist track; this was the root cause behind
+  "playback feels stuck": Play only ever resumed/loaded the *first*
+  track, with no path to deliberately move on to another one
+- Clarify deck-vs-playlist-selection interaction: selecting/reordering/
+  removing playlist entries doesn't yet affect a currently loaded track on
+  the deck, by design for v0.1 — make this discoverable via the new Skip
+  control rather than leaving the user stuck
+
+**Goal:** Core single-deck flow is reliable and unblocked before moving on
+to two-deck mixing.
+
+---
+
 ## v0.2 — Second deck and manual crossfade
 
 - Second, fully independent deck (Deck B)
@@ -117,6 +139,23 @@ support it (primarily Chromium-based).
 - Waveform display
 - Cue points / hot cues
 - MIDI controller support
+- Generate a favicon and embed it directly in `index.html` (e.g. inline
+  base64/SVG) rather than as a separate file
+
+---
+
+## Cross-cutting: offline robustness
+
+Applies to every version, not just one milestone — re-check whenever a
+new dependency is introduced (e.g. SoundTouchJS in v0.4):
+
+- No runtime dependency on external sources (CDN fonts, CDN libraries) for
+  core functionality — vendor anything required locally into the repo, or
+  provide a graceful fallback if an external resource is unavailable
+  offline
+- Before adding any `<link>`/`<script src="https://...">` to the app
+  shell, check it against FR-7.3 (no functionality requires a network
+  connection during normal operation)
 
 ---
 

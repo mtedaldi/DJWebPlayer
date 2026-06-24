@@ -32,6 +32,7 @@ const el = {
   deckDuration: document.getElementById('deck-duration'),
   playBtn: document.getElementById('deck-play'),
   stopBtn: document.getElementById('deck-stop'),
+  skipBtn: document.getElementById('deck-skip'),
   volumeSlider: document.getElementById('deck-volume-slider'),
 };
 
@@ -81,8 +82,16 @@ function renderLibrary() {
   }
 }
 
+const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.oga', '.flac', '.m4a', '.aac', '.weba', '.opus'];
+
+function looksLikeAudio(file) {
+  if (file.type && file.type.startsWith('audio/')) return true;
+  const lowerName = file.name.toLowerCase();
+  return AUDIO_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
+}
+
 async function importFiles(fileList) {
-  const files = Array.from(fileList).filter((f) => f.type.startsWith('audio/'));
+  const files = Array.from(fileList).filter(looksLikeAudio);
   for (const file of files) {
     await addTrack(file);
   }
@@ -184,12 +193,28 @@ async function handleTrackEnded() {
   }
 }
 
+async function skipToNext() {
+  const nextId = playlist.advance();
+  if (nextId) {
+    const wasPlaying = deck.isPlaying;
+    await loadCurrentTrack();
+    if (wasPlaying) deck.play();
+    updateDeckProgress();
+  }
+}
+
 el.playBtn.addEventListener('click', async () => {
-  if (!deck.currentTrackId) {
+  // Load a track if none is loaded yet, or if the playlist's current
+  // selection has moved on (e.g. via double-click or skip) without the
+  // deck following it.
+  if (!deck.currentTrackId || deck.currentTrackId !== playlist.currentTrackId) {
     if (!playlist.currentTrackId) {
       playlist.setCurrentIndex(0);
     }
     await loadCurrentTrack();
+    deck.play();
+    updateDeckProgress();
+    return;
   }
   if (deck.isPlaying) {
     deck.pause();
@@ -197,6 +222,10 @@ el.playBtn.addEventListener('click', async () => {
     deck.play();
   }
   updateDeckProgress();
+});
+
+el.skipBtn.addEventListener('click', () => {
+  skipToNext();
 });
 
 el.stopBtn.addEventListener('click', () => {
@@ -228,6 +257,7 @@ function applyStaticStrings() {
   el.deckTrackName.textContent = t('deck.noTrack');
   el.playBtn.textContent = t('deck.play');
   el.stopBtn.textContent = t('deck.stop');
+  el.skipBtn.textContent = t('deck.skip');
 }
 
 applyStaticStrings();

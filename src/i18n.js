@@ -27,6 +27,7 @@ const STRINGS = {
     'deck.play': 'Play',
     'deck.pause': 'Pause',
     'deck.stop': 'Stop',
+    'deck.skip': 'Skip',
     'deck.noTrack': 'No track loaded',
     'deck.volume': 'Volume',
 

@@ -73,6 +73,8 @@ and a soundboard for sound effects.
   of the currently playing track
 - FR-3.4: Each deck has independent play/pause/stop/seek controls
 - FR-3.5: Each deck has independent gain control
+- FR-3.6: User can manually skip to the next playlist track at any time,
+  independent of automatic advance-on-end
 
 ### 3.4 Speed and pitch
 
@@ -128,7 +130,10 @@ and a soundboard for sound effects.
   Firefox/Safari supported with graceful degradation for unsupported APIs)
 - NFR-2: Touch-friendly UI suitable for tablet use (adequate target sizes,
   no hover-dependent controls)
-- NFR-3: No data leaves the device; no backend/server component required
+- NFR-3: No data leaves the device; no backend/server component required.
+  No runtime dependency on external resources (CDN fonts, CDN-hosted
+  libraries, etc.) for core functionality — dependencies are vendored
+  locally, or degrade gracefully if unavailable offline.
 - NFR-4: Source code and documentation in English
 - NFR-5: MIT license
 - NFR-6: Project hosted at `github.com/mtedaldi/DJWebPlayer`
