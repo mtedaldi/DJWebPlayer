@@ -53,6 +53,10 @@ and a soundboard for sound effects.
 - FR-1.3: Supported formats: at minimum MP3, WAV, OGG, FLAC, AAC/M4A
   (subject to browser codec support)
 - FR-1.4: Library view lists track title, filename, duration
+- FR-1.5: User can sort the library (e.g. by name, date added, duration)
+- FR-1.6: User can filter/search the library by track name
+- FR-1.7: User can select and remove multiple tracks from the library at
+  once, not only one at a time
 
 ### 3.2 Playlist
 
@@ -73,6 +77,8 @@ and a soundboard for sound effects.
   of the currently playing track
 - FR-3.4: Each deck has independent play/pause/stop/seek controls
 - FR-3.5: Each deck has independent gain control
+- FR-3.6: User can manually skip to the next playlist track at any time,
+  independent of automatic advance-on-end
 
 ### 3.4 Speed and pitch
 
@@ -144,6 +150,8 @@ and a soundboard for sound effects.
   currently in scope)
 - Long-term: drag & drop playlist reordering
 - Long-term: possible BPM-aware crossfade timing
+- Whether the library view should be flat or hierarchical (e.g. grouped
+  by folder/artist) — undecided, see roadmap v0.1.2
 
 ## 6. References
 

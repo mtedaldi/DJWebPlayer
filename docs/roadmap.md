@@ -53,6 +53,24 @@ to two-deck mixing.
 
 ---
 
+## v0.1.2 — Library management at scale
+
+As the imported library grows, a flat unsorted list stops scaling. This
+version is independent of deck/mixing work and can be picked up in any
+order relative to v0.2+.
+
+- Sorting (e.g. by name, date added, duration)
+- Filtering / search-as-you-type over the library
+- Whether a flat list or a hierarchical view (e.g. by folder/artist) works
+  better is still open — to be decided based on how Marco's real library
+  is structured once tested
+- Multi-select removal of tracks from the library (not just one at a
+  time)
+
+**Goal:** A library of real-world size (hundreds of tracks) stays usable.
+
+---
+
 ## v0.2 — Second deck and manual crossfade
 
 - Second, fully independent deck (Deck B)
