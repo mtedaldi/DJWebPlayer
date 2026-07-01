@@ -57,11 +57,42 @@ const el = {
 
   dangerReset: document.getElementById('danger-reset'),
 
+  burgerBtn: document.getElementById('burger-btn'),
+  drawerOverlay: document.getElementById('drawer-overlay'),
+  libraryDrawer: document.getElementById('library-drawer'),
+  drawerClose: document.getElementById('drawer-close'),
+
   confirmOverlay: document.getElementById('confirm-overlay'),
   confirmMessage: document.getElementById('confirm-message'),
   confirmCancel: document.getElementById('confirm-cancel'),
   confirmOk: document.getElementById('confirm-ok'),
 };
+
+// ---- Drawer ----
+
+function openDrawer() {
+  el.libraryDrawer.classList.add('is-open');
+  el.drawerOverlay.hidden = false;
+  el.libraryDrawer.setAttribute('aria-hidden', 'false');
+  el.drawerClose.focus();
+}
+
+function closeDrawer() {
+  el.libraryDrawer.classList.remove('is-open');
+  el.drawerOverlay.hidden = true;
+  el.libraryDrawer.setAttribute('aria-hidden', 'true');
+  el.burgerBtn.focus();
+}
+
+el.burgerBtn.addEventListener('click', openDrawer);
+el.drawerClose.addEventListener('click', closeDrawer);
+el.drawerOverlay.addEventListener('click', closeDrawer);
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && el.libraryDrawer.classList.contains('is-open')) {
+    closeDrawer();
+  }
+});
 
 // ---- Formatting helpers ----
 

@@ -9,86 +9,104 @@
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <header class="app-header">
-    <h1>DJWebPlayer</h1>
-  </header>
 
-  <main>
-    <section class="deck-panel" aria-label="Deck">
-      <div id="deck-track-name" class="deck-track-name is-empty"></div>
+  <!-- ── Side drawer: Library ───────────────────────────────────────── -->
+  <div id="drawer-overlay" class="drawer-overlay" hidden></div>
 
-      <div id="deck-progress" class="deck-progress" role="slider" aria-label="Seek">
-        <div id="deck-progress-fill" class="deck-progress-fill"></div>
-      </div>
-
-      <div class="deck-times">
-        <span id="deck-current-time">0:00</span>
-        <span id="deck-duration">0:00</span>
-      </div>
-
-      <div class="deck-controls">
-        <button id="deck-play" class="is-primary"></button>
-        <button id="deck-stop"></button>
-        <button id="deck-skip"></button>
-        <div class="deck-volume">
-          <span>Vol</span>
-          <input id="deck-volume-slider" type="range" min="0" max="1" step="0.01" value="0.8">
-        </div>
-      </div>
-    </section>
-
-    <section class="panel" aria-label="Library">
+  <aside id="library-drawer" class="library-drawer" aria-label="Library" aria-hidden="true">
+    <div class="drawer-header">
       <h2 id="library-title"></h2>
-      <div class="panel-actions">
-        <button id="library-import-folder"></button>
-        <button id="library-import-files"></button>
-      </div>
-      <input id="folder-input" type="file" webkitdirectory hidden>
-      <input id="file-input" type="file" accept="audio/*,.mp3,.wav,.ogg,.oga,.flac,.m4a,.aac,.weba,.opus" multiple hidden>
+      <button id="drawer-close" class="drawer-close" aria-label="Close library">✕</button>
+    </div>
 
-      <div class="library-toolbar">
-        <input id="library-search" type="search" class="search-input">
-      </div>
+    <div class="panel-actions">
+      <button id="library-import-folder"></button>
+      <button id="library-import-files"></button>
+    </div>
+    <input id="folder-input" type="file" webkitdirectory hidden>
+    <input id="file-input" type="file" accept="audio/*,.mp3,.wav,.ogg,.oga,.flac,.m4a,.aac,.weba,.opus" multiple hidden>
 
-      <div class="library-bulk-bar">
-        <button id="library-select-all"></button>
-        <button id="library-remove-selected" disabled></button>
-        <button id="library-clear" class="is-danger"></button>
-      </div>
+    <div class="library-toolbar">
+      <input id="library-search" type="search" class="search-input">
+    </div>
 
-      <p id="library-empty" class="empty-hint"></p>
-      <p id="library-no-results" class="empty-hint" hidden></p>
+    <div class="library-bulk-bar">
+      <button id="library-select-all"></button>
+      <button id="library-remove-selected" disabled></button>
+      <button id="library-clear" class="is-danger"></button>
+    </div>
 
-      <div class="library-table-wrap">
-        <table id="library-table" class="library-table">
-          <thead>
-            <tr>
-              <th class="col-check"><input type="checkbox" id="library-check-all" title="Select all"></th>
-              <th class="col-name sortable" data-sort="name" id="th-name"></th>
-              <th class="col-duration sortable" data-sort="duration" id="th-duration"></th>
-              <th class="col-actions"></th>
-            </tr>
-          </thead>
-          <tbody id="library-tbody"></tbody>
-        </table>
-      </div>
-    </section>
+    <p id="library-empty" class="empty-hint"></p>
+    <p id="library-no-results" class="empty-hint" hidden></p>
 
-    <section class="panel" aria-label="Playlist">
-      <h2 id="playlist-title"></h2>
-      <div class="panel-actions">
-        <button id="playlist-clear" class="is-danger"></button>
-      </div>
-      <p id="playlist-empty" class="empty-hint"></p>
-      <ul id="playlist-list" class="item-list"></ul>
-    </section>
+    <div class="library-table-wrap">
+      <table id="library-table" class="library-table">
+        <thead>
+          <tr>
+            <th class="col-check"><input type="checkbox" id="library-check-all" title="Select all"></th>
+            <th class="col-name sortable" data-sort="name" id="th-name"></th>
+            <th class="col-duration sortable" data-sort="duration" id="th-duration"></th>
+            <th class="col-actions"></th>
+          </tr>
+        </thead>
+        <tbody id="library-tbody"></tbody>
+      </table>
+    </div>
 
-    <section class="panel danger-zone" aria-label="Danger zone">
-      <h2 id="danger-title"></h2>
+    <div class="drawer-danger">
+      <h3 id="danger-title"></h3>
       <button id="danger-reset" class="is-danger"></button>
-    </section>
-  </main>
+    </div>
+  </aside>
 
+  <!-- ── App shell ──────────────────────────────────────────────────── -->
+  <div class="app-shell">
+
+    <header class="app-header">
+      <button id="burger-btn" class="burger-btn" aria-label="Open library">☰</button>
+      <h1>DJWebPlayer</h1>
+    </header>
+
+    <main class="app-main">
+
+      <!-- Deck -->
+      <section class="deck-panel" aria-label="Deck">
+        <div id="deck-track-name" class="deck-track-name is-empty"></div>
+
+        <div id="deck-progress" class="deck-progress" role="slider" aria-label="Seek">
+          <div id="deck-progress-fill" class="deck-progress-fill"></div>
+        </div>
+
+        <div class="deck-times">
+          <span id="deck-current-time">0:00</span>
+          <span id="deck-duration">0:00</span>
+        </div>
+
+        <div class="deck-controls">
+          <button id="deck-play" class="is-primary"></button>
+          <button id="deck-stop"></button>
+          <button id="deck-skip"></button>
+          <div class="deck-volume">
+            <span>Vol</span>
+            <input id="deck-volume-slider" type="range" min="0" max="1" step="0.01" value="0.8">
+          </div>
+        </div>
+      </section>
+
+      <!-- Playlist -->
+      <section class="playlist-panel" aria-label="Playlist">
+        <div class="playlist-header">
+          <h2 id="playlist-title"></h2>
+          <button id="playlist-clear" class="is-danger btn-small"></button>
+        </div>
+        <p id="playlist-empty" class="empty-hint"></p>
+        <ul id="playlist-list" class="item-list playlist-list"></ul>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ── Confirm overlay ────────────────────────────────────────────── -->
   <div id="confirm-overlay" class="confirm-overlay" hidden>
     <div class="confirm-box">
       <p id="confirm-message"></p>
