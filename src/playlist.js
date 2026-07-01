@@ -16,6 +16,11 @@ class Playlist {
     this.items.push(trackId);
   }
 
+  clear() {
+    this.items = [];
+    this.currentIndex = -1;
+  }
+
   removeAt(index) {
     if (index < 0 || index >= this.items.length) return;
     this.items.splice(index, 1);
@@ -24,6 +29,18 @@ class Playlist {
     } else if (this.currentIndex === index) {
       this.currentIndex = -1;
     }
+  }
+
+  /**
+   * Remove every playlist entry referencing one of the given track ids.
+   * Used when tracks are deleted from the library (FR-1.7/1.8) so the
+   * playlist doesn't keep dangling references.
+   */
+  removeByTrackIds(trackIds) {
+    const idSet = new Set(trackIds);
+    const currentTrackId = this.currentTrackId;
+    this.items = this.items.filter((id) => !idSet.has(id));
+    this.currentIndex = currentTrackId ? this.items.indexOf(currentTrackId) : -1;
   }
 
   moveUp(index) {

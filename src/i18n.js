@@ -16,6 +16,17 @@ const STRINGS = {
     'library.importFiles': 'Import files',
     'library.empty': 'No tracks imported yet.',
     'library.addToPlaylist': 'Add to playlist',
+    'library.search': 'Search library…',
+    'library.sortName': 'Name',
+    'library.sortDate': 'Date added',
+    'library.sortDuration': 'Duration',
+    'library.selectAll': 'Select all',
+    'library.deselectAll': 'Deselect all',
+    'library.removeSelected': 'Remove selected',
+    'library.clear': 'Clear library',
+    'library.clearConfirm': 'Remove all tracks from the library? This cannot be undone.',
+    'library.noResults': 'No tracks match your search.',
+    'library.importSkippedDuplicates': 'Skipped {count} duplicate(s) already in the library.',
 
     'playlist.title': 'Playlist',
     'playlist.empty': 'Playlist is empty. Add tracks from your library.',
@@ -23,6 +34,8 @@ const STRINGS = {
     'playlist.moveUp': 'Move up',
     'playlist.moveDown': 'Move down',
     'playlist.nowPlaying': 'Now playing',
+    'playlist.clear': 'Clear playlist',
+    'playlist.clearConfirm': 'Remove all tracks from the playlist? This cannot be undone.',
 
     'deck.play': 'Play',
     'deck.pause': 'Pause',
@@ -31,8 +44,15 @@ const STRINGS = {
     'deck.noTrack': 'No track loaded',
     'deck.volume': 'Volume',
 
+    'danger.title': 'Danger zone',
+    'danger.reset': 'Reset app',
+    'danger.resetConfirm': 'This will permanently delete your entire library, playlist, and all app data, then reload the app. This cannot be undone. Continue?',
+    'danger.resetting': 'Resetting…',
+
     'common.loading': 'Loading…',
     'common.error': 'Something went wrong',
+    'common.cancel': 'Cancel',
+    'common.confirm': 'Confirm',
   },
 };
 
@@ -40,13 +60,21 @@ let currentLang = 'en';
 
 /**
  * Translate a key for the current language, falling back to English,
- * then to the key itself if nothing is found.
+ * then to the key itself if nothing is found. Optional params object
+ * substitutes {placeholder} tokens in the string, e.g.
+ * t('library.importSkippedDuplicates', { count: 3 }).
  */
-function t(key) {
+function t(key, params) {
   const table = STRINGS[currentLang] || STRINGS.en;
-  if (table[key] !== undefined) return table[key];
-  if (STRINGS.en[key] !== undefined) return STRINGS.en[key];
-  return key;
+  let str = table[key] !== undefined ? table[key] : STRINGS.en[key];
+  if (str === undefined) return key;
+
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      str = str.replace(`{${k}}`, v);
+    }
+  }
+  return str;
 }
 
 function setLanguage(lang) {

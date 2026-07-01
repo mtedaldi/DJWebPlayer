@@ -45,16 +45,51 @@
       </div>
       <input id="folder-input" type="file" webkitdirectory hidden>
       <input id="file-input" type="file" accept="audio/*,.mp3,.wav,.ogg,.oga,.flac,.m4a,.aac,.weba,.opus" multiple hidden>
+
+      <div class="library-toolbar">
+        <input id="library-search" type="search" class="search-input">
+        <select id="library-sort" class="sort-select">
+          <option value="addedAt">—</option>
+          <option value="name">—</option>
+          <option value="duration">—</option>
+        </select>
+      </div>
+
+      <div class="library-bulk-bar">
+        <button id="library-select-all"></button>
+        <button id="library-remove-selected" disabled></button>
+        <button id="library-clear" class="is-danger"></button>
+      </div>
+
       <p id="library-empty" class="empty-hint"></p>
+      <p id="library-no-results" class="empty-hint" hidden></p>
       <ul id="library-list" class="item-list"></ul>
     </section>
 
     <section class="panel" aria-label="Playlist">
       <h2 id="playlist-title"></h2>
+      <div class="panel-actions">
+        <button id="playlist-clear" class="is-danger"></button>
+      </div>
       <p id="playlist-empty" class="empty-hint"></p>
       <ul id="playlist-list" class="item-list"></ul>
     </section>
+
+    <section class="panel danger-zone" aria-label="Danger zone">
+      <h2 id="danger-title"></h2>
+      <button id="danger-reset" class="is-danger"></button>
+    </section>
   </main>
+
+  <div id="confirm-overlay" class="confirm-overlay" hidden>
+    <div class="confirm-box">
+      <p id="confirm-message"></p>
+      <div class="confirm-actions">
+        <button id="confirm-cancel"></button>
+        <button id="confirm-ok" class="is-danger"></button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="./app.js"></script>
 </body>

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- v0.1.2: Library management at scale —
+  - Search/filter library by name (live, case-insensitive)
+  - Sort library by date added, name, or duration
+  - Track duration is now read and stored on import, shown in the
+    library list
+  - Multi-select removal of tracks from the library (checkboxes,
+    select-all/deselect-all)
+  - "Clear library" and "Clear playlist" actions, both with a themed
+    confirmation dialog
+  - "Reset app" (danger zone): wipes the entire local database and
+    reloads, for development and for resetting a tablet between events
+  - Duplicate detection on import (filename + size heuristic): matching
+    files are silently skipped, logged with a count
+  - Removing/clearing library tracks now also cleans up any dangling
+    references in the playlist
+- Service worker cache bumped to v3.
+
 ### Fixed
 - Folder/file import no longer relies solely on `file.type` (often empty
   for `.m4a`/`.flac` in Firefox), so recursive folder imports (e.g. a
