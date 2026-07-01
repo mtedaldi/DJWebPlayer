@@ -17,6 +17,8 @@ const STRINGS = {
     'library.empty': 'No tracks imported yet.',
     'library.addToPlaylist': 'Add to playlist',
     'library.search': 'Search library…',
+    'library.colName': 'Title',
+    'library.colDuration': 'Duration',
     'library.sortName': 'Name',
     'library.sortDate': 'Date added',
     'library.sortDuration': 'Duration',

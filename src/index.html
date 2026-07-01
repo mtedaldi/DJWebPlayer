@@ -48,11 +48,6 @@
 
       <div class="library-toolbar">
         <input id="library-search" type="search" class="search-input">
-        <select id="library-sort" class="sort-select">
-          <option value="addedAt">—</option>
-          <option value="name">—</option>
-          <option value="duration">—</option>
-        </select>
       </div>
 
       <div class="library-bulk-bar">
@@ -63,7 +58,20 @@
 
       <p id="library-empty" class="empty-hint"></p>
       <p id="library-no-results" class="empty-hint" hidden></p>
-      <ul id="library-list" class="item-list"></ul>
+
+      <div class="library-table-wrap">
+        <table id="library-table" class="library-table">
+          <thead>
+            <tr>
+              <th class="col-check"><input type="checkbox" id="library-check-all" title="Select all"></th>
+              <th class="col-name sortable" data-sort="name" id="th-name"></th>
+              <th class="col-duration sortable" data-sort="duration" id="th-duration"></th>
+              <th class="col-actions"></th>
+            </tr>
+          </thead>
+          <tbody id="library-tbody"></tbody>
+        </table>
+      </div>
     </section>
 
     <section class="panel" aria-label="Playlist">

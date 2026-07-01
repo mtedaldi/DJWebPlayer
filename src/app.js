@@ -14,6 +14,7 @@ const playlist = new Playlist();
 let library = []; // cached track metadata list, unsorted/unfiltered (source of truth)
 let librarySearchTerm = '';
 let librarySortKey = 'addedAt';
+let librarySortAsc = true;
 const selectedLibraryIds = new Set();
 
 const deck = new Deck({
@@ -30,11 +31,13 @@ const el = {
   folderInput: document.getElementById('folder-input'),
   fileInput: document.getElementById('file-input'),
   librarySearch: document.getElementById('library-search'),
-  librarySort: document.getElementById('library-sort'),
   librarySelectAll: document.getElementById('library-select-all'),
   libraryRemoveSelected: document.getElementById('library-remove-selected'),
   libraryClear: document.getElementById('library-clear'),
-  libraryList: document.getElementById('library-list'),
+  libraryTbody: document.getElementById('library-tbody'),
+  libraryCheckAll: document.getElementById('library-check-all'),
+  thName: document.getElementById('th-name'),
+  thDuration: document.getElementById('th-duration'),
   libraryEmpty: document.getElementById('library-empty'),
   libraryNoResults: document.getElementById('library-no-results'),
 
@@ -112,65 +115,81 @@ function getVisibleTracks() {
   }
 
   const sorted = [...tracks];
+  const dir = librarySortAsc ? 1 : -1;
   switch (librarySortKey) {
     case 'name':
-      sorted.sort((a, b) => displayName(a).localeCompare(displayName(b)));
+      sorted.sort((a, b) => dir * displayName(a).localeCompare(displayName(b)));
       break;
     case 'duration':
-      sorted.sort((a, b) => (a.duration || 0) - (b.duration || 0));
+      sorted.sort((a, b) => dir * ((a.duration || 0) - (b.duration || 0)));
       break;
     case 'addedAt':
     default:
-      sorted.sort((a, b) => a.addedAt - b.addedAt);
+      sorted.sort((a, b) => dir * (a.addedAt - b.addedAt));
       break;
   }
   return sorted;
 }
 
+function updateSortHeaders() {
+  const arrow = librarySortAsc ? ' ▲' : ' ▼';
+  el.thName.textContent = t('library.colName') + (librarySortKey === 'name' ? arrow : '');
+  el.thDuration.textContent = t('library.colDuration') + (librarySortKey === 'duration' ? arrow : '');
+  el.thName.classList.toggle('is-sorted', librarySortKey === 'name');
+  el.thDuration.classList.toggle('is-sorted', librarySortKey === 'duration');
+}
+
 function updateBulkBar() {
   el.libraryRemoveSelected.disabled = selectedLibraryIds.size === 0;
-  el.librarySelectAll.textContent =
-    selectedLibraryIds.size > 0 && selectedLibraryIds.size === getVisibleTracks().length
-      ? t('library.deselectAll')
-      : t('library.selectAll');
+  const visible = getVisibleTracks();
+  const allSelected = visible.length > 0 && visible.every((t2) => selectedLibraryIds.has(t2.id));
+  el.librarySelectAll.textContent = allSelected ? t('library.deselectAll') : t('library.selectAll');
+  if (el.libraryCheckAll) el.libraryCheckAll.checked = allSelected;
 }
 
 function renderLibrary() {
   const visible = getVisibleTracks();
 
-  el.libraryList.innerHTML = '';
+  el.libraryTbody.innerHTML = '';
   el.libraryEmpty.hidden = library.length > 0;
   el.libraryNoResults.hidden = !(library.length > 0 && visible.length === 0);
+  updateSortHeaders();
 
   for (const track of visible) {
-    const li = document.createElement('li');
-    li.className = 'item-row' + (selectedLibraryIds.has(track.id) ? ' is-selected' : '');
+    const tr = document.createElement('tr');
+    if (selectedLibraryIds.has(track.id)) tr.classList.add('is-selected');
 
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.checked = selectedLibraryIds.has(track.id);
-    checkbox.addEventListener('change', () => {
-      if (checkbox.checked) {
-        selectedLibraryIds.add(track.id);
-      } else {
-        selectedLibraryIds.delete(track.id);
-      }
+    // Checkbox cell
+    const tdCheck = document.createElement('td');
+    tdCheck.className = 'col-check';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = selectedLibraryIds.has(track.id);
+    cb.addEventListener('change', () => {
+      if (cb.checked) selectedLibraryIds.add(track.id);
+      else selectedLibraryIds.delete(track.id);
       renderLibrary();
     });
-    li.appendChild(checkbox);
+    tdCheck.appendChild(cb);
+    tr.appendChild(tdCheck);
 
-    const name = document.createElement('span');
-    name.className = 'item-name';
-    name.textContent = displayName(track);
-    li.appendChild(name);
+    // Name cell
+    const tdName = document.createElement('td');
+    tdName.className = 'col-name';
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = displayName(track);
+    tdName.appendChild(nameSpan);
+    tr.appendChild(tdName);
 
-    if (track.duration) {
-      const duration = document.createElement('span');
-      duration.className = 'item-duration';
-      duration.textContent = formatTime(track.duration);
-      li.appendChild(duration);
-    }
+    // Duration cell
+    const tdDur = document.createElement('td');
+    tdDur.className = 'col-duration';
+    tdDur.textContent = track.duration ? formatTime(track.duration) : '—';
+    tr.appendChild(tdDur);
 
+    // Add-to-playlist button cell
+    const tdBtn = document.createElement('td');
+    tdBtn.className = 'col-actions';
     const addBtn = document.createElement('button');
     addBtn.textContent = '+';
     addBtn.title = t('library.addToPlaylist');
@@ -178,9 +197,10 @@ function renderLibrary() {
       playlist.add(track.id);
       renderPlaylist();
     });
-    li.appendChild(addBtn);
+    tdBtn.appendChild(addBtn);
+    tr.appendChild(tdBtn);
 
-    el.libraryList.appendChild(li);
+    el.libraryTbody.appendChild(tr);
   }
 
   updateBulkBar();
@@ -221,10 +241,32 @@ el.librarySearch.addEventListener('input', (e) => {
   renderLibrary();
 });
 
-el.librarySort.addEventListener('change', (e) => {
-  librarySortKey = e.target.value;
-  renderLibrary();
+// Sortable column headers
+document.querySelectorAll('.library-table th.sortable').forEach((th) => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    if (librarySortKey === key) {
+      librarySortAsc = !librarySortAsc;
+    } else {
+      librarySortKey = key;
+      librarySortAsc = true;
+    }
+    renderLibrary();
+  });
 });
+
+// Header checkbox: select/deselect all visible
+if (el.libraryCheckAll) {
+  el.libraryCheckAll.addEventListener('change', () => {
+    const visibleIds = getVisibleTracks().map((t2) => t2.id);
+    if (el.libraryCheckAll.checked) {
+      visibleIds.forEach((id) => selectedLibraryIds.add(id));
+    } else {
+      visibleIds.forEach((id) => selectedLibraryIds.delete(id));
+    }
+    renderLibrary();
+  });
+}
 
 el.librarySelectAll.addEventListener('click', () => {
   const visibleIds = getVisibleTracks().map((t2) => t2.id);
@@ -449,12 +491,6 @@ function applyStaticStrings() {
   el.librarySelectAll.textContent = t('library.selectAll');
   el.libraryRemoveSelected.textContent = t('library.removeSelected');
   el.libraryClear.textContent = t('library.clear');
-
-  for (const option of el.librarySort.options) {
-    if (option.value === 'addedAt') option.textContent = t('library.sortDate');
-    else if (option.value === 'name') option.textContent = t('library.sortName');
-    else if (option.value === 'duration') option.textContent = t('library.sortDuration');
-  }
 
   el.playlistEmpty.textContent = t('playlist.empty');
   el.playlistClear.textContent = t('playlist.clear');

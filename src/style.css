@@ -258,8 +258,7 @@ section.panel h2 {
   margin-bottom: 0.75rem;
 }
 
-.search-input,
-.sort-select {
+.search-input {
   min-height: var(--touch-min);
   background: var(--color-panel-raised);
   border: 1px solid var(--color-border);
@@ -268,15 +267,109 @@ section.panel h2 {
   font-family: inherit;
   font-size: 0.9rem;
   padding: 0 0.6rem;
-}
-
-.search-input {
   flex: 1;
   min-width: 0;
 }
 
-.sort-select {
-  flex-shrink: 0;
+/* ---- Library table ---- */
+
+.library-table-wrap {
+  overflow-x: auto;
+  margin-top: 0.5rem;
+}
+
+.library-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.library-table thead th {
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  color: var(--color-text-dim);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.library-table thead th.sortable {
+  cursor: pointer;
+}
+
+.library-table thead th.sortable:hover {
+  color: var(--color-text);
+}
+
+.library-table thead th.is-sorted {
+  color: var(--color-accent);
+}
+
+.library-table tbody tr {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.library-table tbody tr:hover {
+  background: var(--color-panel-raised);
+}
+
+.library-table tbody tr.is-selected {
+  background: #2a2417;
+}
+
+.library-table td {
+  padding: 0.4rem 0.5rem;
+  vertical-align: middle;
+}
+
+.library-table .col-check {
+  width: 32px;
+  text-align: center;
+}
+
+.library-table .col-check input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+.library-table .col-duration {
+  width: 60px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-text-dim);
+}
+
+.library-table .col-actions {
+  width: 44px;
+  text-align: right;
+}
+
+.library-table .col-actions button {
+  min-width: var(--touch-min);
+  min-height: 36px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text-dim);
+  font-size: 1rem;
+  padding: 0;
+  cursor: pointer;
+}
+
+.library-table .col-name {
+  overflow: hidden;
+  max-width: 0; /* forces ellipsis with table-layout trick */
+}
+
+.library-table .col-name span {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ---- Bulk action bar ---- */
