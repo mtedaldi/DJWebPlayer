@@ -142,6 +142,9 @@ support it (primarily Chromium-based).
 
 ## v0.7 — Polish pass
 
+- Import progress feedback: show a spinner or "Importing… (n/m)" counter
+  during folder import, since duration-reading per track takes noticeable
+  time on large collections and the UI currently appears frozen
 - Touch UI refinement based on real tablet usage
 - Performance check (especially decoupled pitch-shift CPU load on tablets)
 - Error handling / edge cases (corrupt files, unsupported formats, storage
