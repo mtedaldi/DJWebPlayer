@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- v0.1.3:
+  - Playlist persistence: playlist survives page reload (stored in
+    IndexedDB settings store); track ids that no longer exist in the
+    library are silently dropped on restore
+  - Loop mode: toggle button on the deck restarts the playlist from the
+    beginning when the last track ends; loop state is also persisted
+  - Version number (v0.1.3) displayed in the app header
+  - About dialog (ℹ button in header): shows version and link to the
+    GitHub repository
+  - IndexedDB schema bumped to version 2 (adds settings store)
+  - Service worker cache bumped to v4
+
+
+### Added
 - v0.1.2: Library management at scale —
   - Search/filter library by name (live, case-insensitive)
   - Sort library by date added, name, or duration

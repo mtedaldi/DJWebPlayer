@@ -6,9 +6,13 @@ import {
   deleteTracks,
   clearLibrary,
   resetDatabase,
+  getSetting,
+  setSetting,
 } from './storage.js';
 import { Deck } from './deck.js';
 import { Playlist } from './playlist.js';
+
+const APP_VERSION = '0.1.3';
 
 const playlist = new Playlist();
 let library = []; // cached track metadata list, unsorted/unfiltered (source of truth)
@@ -16,6 +20,7 @@ let librarySearchTerm = '';
 let librarySortKey = 'addedAt';
 let librarySortAsc = true;
 const selectedLibraryIds = new Set();
+let loopEnabled = false;
 
 const deck = new Deck({
   onEnded: handleTrackEnded,
@@ -53,7 +58,16 @@ const el = {
   playBtn: document.getElementById('deck-play'),
   stopBtn: document.getElementById('deck-stop'),
   skipBtn: document.getElementById('deck-skip'),
+  loopBtn: document.getElementById('deck-loop'),
   volumeSlider: document.getElementById('deck-volume-slider'),
+
+  appVersion: document.getElementById('app-version'),
+  infoBtn: document.getElementById('info-btn'),
+  aboutOverlay: document.getElementById('about-overlay'),
+  aboutTitle: document.getElementById('about-title'),
+  aboutVersionLine: document.getElementById('about-version-line'),
+  aboutRepoLink: document.getElementById('about-repo-link'),
+  aboutClose: document.getElementById('about-close'),
 
   dangerReset: document.getElementById('danger-reset'),
 
@@ -91,6 +105,56 @@ el.drawerOverlay.addEventListener('click', closeDrawer);
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && el.libraryDrawer.classList.contains('is-open')) {
     closeDrawer();
+  }
+});
+
+// ---- Playlist persistence ----
+
+async function savePlaylistState() {
+  await setSetting('playlist', {
+    items: playlist.items,
+    currentIndex: playlist.currentIndex,
+  });
+}
+
+async function loadPlaylistState() {
+  const saved = await getSetting('playlist');
+  if (!saved) return;
+  // Only restore track ids that still exist in the library
+  const libraryIds = new Set(library.map((t2) => t2.id));
+  playlist.items = (saved.items || []).filter((id) => libraryIds.has(id));
+  const idx = saved.currentIndex ?? -1;
+  playlist.currentIndex = idx < playlist.items.length ? idx : -1;
+}
+
+// ---- Loop ----
+
+function updateLoopButton() {
+  el.loopBtn.classList.toggle('is-active', loopEnabled);
+}
+
+el.loopBtn.addEventListener('click', async () => {
+  loopEnabled = !loopEnabled;
+  updateLoopButton();
+  await setSetting('loop', loopEnabled);
+});
+
+// ---- About dialog ----
+
+el.infoBtn.addEventListener('click', () => {
+  el.aboutOverlay.hidden = false;
+  el.aboutClose.focus();
+});
+
+el.aboutClose.addEventListener('click', () => {
+  el.aboutOverlay.hidden = true;
+  el.infoBtn.focus();
+});
+
+el.aboutOverlay.addEventListener('click', (e) => {
+  if (e.target === el.aboutOverlay) {
+    el.aboutOverlay.hidden = true;
+    el.infoBtn.focus();
   }
 });
 
@@ -227,8 +291,7 @@ function renderLibrary() {
     addBtn.addEventListener('click', () => {
       playlist.add(track.id);
       renderPlaylist();
-    });
-    tdBtn.appendChild(addBtn);
+    });    tdBtn.appendChild(addBtn);
     tr.appendChild(tdBtn);
 
     el.libraryTbody.appendChild(tr);
@@ -337,7 +400,7 @@ function findTrackMeta(trackId) {
   return library.find((t2) => t2.id === trackId);
 }
 
-function renderPlaylist() {
+function renderPlaylist(save = true) {
   el.playlistList.innerHTML = '';
   el.playlistEmpty.hidden = playlist.items.length > 0;
 
@@ -381,10 +444,13 @@ function renderPlaylist() {
     li.addEventListener('dblclick', () => {
       playlist.setCurrentIndex(index);
       loadCurrentTrack().then(() => deck.play());
+      renderPlaylist();
     });
 
     el.playlistList.appendChild(li);
   });
+
+  if (save) savePlaylistState();
 }
 
 el.playlistClear.addEventListener('click', async () => {
@@ -428,9 +494,14 @@ async function handleTrackEnded() {
   if (nextId) {
     await loadCurrentTrack();
     deck.play();
+  } else if (loopEnabled && playlist.items.length > 0) {
+    playlist.setCurrentIndex(0);
+    await loadCurrentTrack();
+    deck.play();
   } else {
     updateDeckProgress();
   }
+  await savePlaylistState();
 }
 
 async function skipToNext() {
@@ -440,6 +511,7 @@ async function skipToNext() {
     await loadCurrentTrack();
     if (wasPlaying) deck.play();
     updateDeckProgress();
+    await savePlaylistState();
   }
 }
 
@@ -514,6 +586,12 @@ function applyStaticStrings() {
   document.getElementById('playlist-title').textContent = t('playlist.title');
   document.getElementById('danger-title').textContent = t('danger.title');
 
+  el.appVersion.textContent = `v${APP_VERSION}`;
+  el.aboutTitle.textContent = t('about.title');
+  el.aboutVersionLine.textContent = `${t('about.version')}: ${APP_VERSION}`;
+  el.aboutRepoLink.textContent = t('about.repo');
+  el.aboutClose.textContent = t('about.close');
+
   el.libraryImportFolder.textContent = t('library.import');
   el.libraryImportFiles.textContent = t('library.importFiles');
   el.libraryEmpty.textContent = t('library.empty');
@@ -530,6 +608,7 @@ function applyStaticStrings() {
   el.playBtn.textContent = t('deck.play');
   el.stopBtn.textContent = t('deck.stop');
   el.skipBtn.textContent = t('deck.skip');
+  el.loopBtn.textContent = t('deck.loop');
 
   el.dangerReset.textContent = t('danger.reset');
   el.confirmCancel.textContent = t('common.cancel');
@@ -537,8 +616,22 @@ function applyStaticStrings() {
 }
 
 applyStaticStrings();
-refreshLibrary();
 deck.setVolume(parseFloat(el.volumeSlider.value));
+
+// Load library first, then restore playlist (which validates against library)
+// and loop state from IndexedDB.
+(async () => {
+  await refreshLibrary();
+
+  const savedLoop = await getSetting('loop');
+  if (savedLoop === true) {
+    loopEnabled = true;
+    updateLoopButton();
+  }
+
+  await loadPlaylistState();
+  renderPlaylist(false); // render without re-saving what we just loaded
+})();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

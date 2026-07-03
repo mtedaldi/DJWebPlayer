@@ -43,8 +43,14 @@ const STRINGS = {
     'deck.pause': 'Pause',
     'deck.stop': 'Stop',
     'deck.skip': 'Skip',
+    'deck.loop': 'Loop',
     'deck.noTrack': 'No track loaded',
     'deck.volume': 'Volume',
+
+    'about.title': 'About',
+    'about.version': 'Version',
+    'about.repo': 'Source code on GitHub',
+    'about.close': 'Close',
 
     'danger.title': 'Danger zone',
     'danger.reset': 'Reset app',

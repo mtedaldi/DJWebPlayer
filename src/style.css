@@ -79,7 +79,15 @@ input:focus-visible {
   text-transform: uppercase;
 }
 
-.burger-btn {
+.app-version {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--color-text-dim);
+  opacity: 0.6;
+  margin-left: -0.25rem;
+}
+
+.burger-btn, .info-btn {
   min-width: var(--touch-min);
   min-height: var(--touch-min);
   background: transparent;
@@ -92,7 +100,13 @@ input:focus-visible {
   border-radius: var(--radius);
 }
 
-.burger-btn:hover { background: var(--color-panel-raised); }
+.burger-btn:hover, .info-btn:hover { background: var(--color-panel-raised); }
+
+.info-btn {
+  margin-left: auto;
+  font-size: 1.1rem;
+  color: var(--color-text-dim);
+}
 
 /* ── Main content (player + playlist) ─────────────────────────── */
 
@@ -175,6 +189,38 @@ input:focus-visible {
 }
 
 .deck-controls button.is-primary {
+  background: var(--color-accent);
+  color: #1a1300;
+  border-color: var(--color-accent);
+}
+
+/* Toggle button (loop): dim when off, accent when on */
+.deck-controls button.btn-toggle {
+  opacity: 0.4;
+}
+.deck-controls button.btn-toggle.is-active {
+  opacity: 1;
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* ── About box ─────────────────────────────────────────────────── */
+.about-box h2 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+}
+.about-box p {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  color: var(--color-text-dim);
+}
+.about-box a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+.about-box a:hover { text-decoration: underline; }
+.about-box .confirm-actions { margin-top: 1rem; }
+.about-box .confirm-actions button.is-primary {
   background: var(--color-accent);
   color: #1a1300;
   border-color: var(--color-accent);

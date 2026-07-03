@@ -10,8 +10,9 @@
  */
 
 const DB_NAME = 'djwebplayer';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_TRACKS = 'tracks';
+const STORE_SETTINGS = 'settings';
 
 let dbPromise = null;
 
@@ -26,6 +27,9 @@ function openDb() {
       if (!db.objectStoreNames.contains(STORE_TRACKS)) {
         const store = db.createObjectStore(STORE_TRACKS, { keyPath: 'id' });
         store.createIndex('addedAt', 'addedAt', { unique: false });
+      }
+      if (!db.objectStoreNames.contains(STORE_SETTINGS)) {
+        db.createObjectStore(STORE_SETTINGS);
       }
     };
 
@@ -204,6 +208,32 @@ async function resetDatabase() {
   });
 }
 
+/**
+ * Read a setting value by key. Returns null if not set.
+ */
+async function getSetting(key) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_SETTINGS, 'readonly');
+    const request = tx.objectStore(STORE_SETTINGS).get(key);
+    request.onsuccess = () => resolve(request.result ?? null);
+    request.onerror = (event) => reject(event.target.error);
+  });
+}
+
+/**
+ * Write a setting value by key.
+ */
+async function setSetting(key, value) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_SETTINGS, 'readwrite');
+    tx.objectStore(STORE_SETTINGS).put(value, key);
+    tx.oncomplete = resolve;
+    tx.onerror = (event) => reject(event.target.error);
+  });
+}
+
 export {
   addTrack,
   listTracks,
@@ -212,4 +242,6 @@ export {
   deleteTracks,
   clearLibrary,
   resetDatabase,
+  getSetting,
+  setSetting,
 };

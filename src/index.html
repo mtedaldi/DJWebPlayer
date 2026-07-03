@@ -65,6 +65,8 @@
     <header class="app-header">
       <button id="burger-btn" class="burger-btn" aria-label="Open library">☰</button>
       <h1>DJWebPlayer</h1>
+      <span id="app-version" class="app-version"></span>
+      <button id="info-btn" class="info-btn" aria-label="About">ℹ</button>
     </header>
 
     <main class="app-main">
@@ -86,6 +88,7 @@
           <button id="deck-play" class="is-primary"></button>
           <button id="deck-stop"></button>
           <button id="deck-skip"></button>
+          <button id="deck-loop" class="btn-toggle"></button>
           <div class="deck-volume">
             <span>Vol</span>
             <input id="deck-volume-slider" type="range" min="0" max="1" step="0.01" value="0.8">
@@ -113,6 +116,19 @@
       <div class="confirm-actions">
         <button id="confirm-cancel"></button>
         <button id="confirm-ok" class="is-danger"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── About dialog ──────────────────────────────────────────────── -->
+  <div id="about-overlay" class="confirm-overlay" hidden>
+    <div class="confirm-box about-box">
+      <h2 id="about-title"></h2>
+      <p id="about-version-line"></p>
+      <p><a id="about-repo-link" href="https://github.com/mtedaldi/DJWebPlayer/tree/main"
+            target="_blank" rel="noopener"></a></p>
+      <div class="confirm-actions">
+        <button id="about-close" class="is-primary"></button>
       </div>
     </div>
   </div>
