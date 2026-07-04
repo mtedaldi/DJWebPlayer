@@ -587,6 +587,7 @@ function applyStaticStrings() {
   document.getElementById('danger-title').textContent = t('danger.title');
 
   el.appVersion.textContent = `v${APP_VERSION}`;
+  el.infoBtn.textContent = `ℹ v${APP_VERSION}`;
   el.aboutTitle.textContent = t('about.title');
   el.aboutVersionLine.textContent = `${t('about.version')}: ${APP_VERSION}`;
   el.aboutRepoLink.textContent = t('about.repo');
@@ -608,7 +609,7 @@ function applyStaticStrings() {
   el.playBtn.textContent = t('deck.play');
   el.stopBtn.textContent = t('deck.stop');
   el.skipBtn.textContent = t('deck.skip');
-  el.loopBtn.textContent = t('deck.loop');
+  el.loopBtn.textContent = `🔁 ${t('deck.loop')}`;
 
   el.dangerReset.textContent = t('danger.reset');
   el.confirmCancel.textContent = t('common.cancel');

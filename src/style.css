@@ -20,7 +20,7 @@
   --radius:    6px;
   --touch-min: 44px;
   --header-h:  52px;
-  --drawer-w:  360px;
+  --drawer-w:  420px;
 }
 
 /* ── Reset ─────────────────────────────────────────────────────── */
@@ -104,8 +104,10 @@ input:focus-visible {
 
 .info-btn {
   margin-left: auto;
-  font-size: 1.1rem;
+  font-size: 0.75rem;
   color: var(--color-text-dim);
+  padding: 0 0.5rem;
+  letter-spacing: 0.02em;
 }
 
 /* ── Main content (player + playlist) ─────────────────────────── */
@@ -194,12 +196,19 @@ input:focus-visible {
   border-color: var(--color-accent);
 }
 
-/* Toggle button (loop): dim when off, accent when on */
+/* Toggle button (loop): pill shape, clearly distinct from transport buttons */
 .deck-controls button.btn-toggle {
-  opacity: 0.4;
+  min-width: unset;
+  padding: 0 0.85rem;
+  border-radius: 999px;          /* pill */
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-dim);
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
 }
 .deck-controls button.btn-toggle.is-active {
-  opacity: 1;
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
   border-color: var(--color-accent);
   color: var(--color-accent);
 }
@@ -479,6 +488,7 @@ input:focus-visible {
 
 .library-table {
   width: 100%;
+  min-width: 320px;
   border-collapse: collapse;
   font-size: 0.88rem;
   table-layout: fixed;
