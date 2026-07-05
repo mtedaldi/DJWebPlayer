@@ -1,5 +1,9 @@
 # DJWebPlayer
 
+[![Deploy to GitHub Pages](https://github.com/mtedaldi/DJWebPlayer/actions/workflows/deploy.yml/badge.svg)](https://github.com/mtedaldi/DJWebPlayer/actions/workflows/deploy.yml)
+
+**Live:** https://mtedaldi.github.io/DJWebPlayer/
+
 A browser-based media player for locally stored music, built for tablets
 acting as a portable playback/mixing rig. Runs as an installable, fully
 offline-capable Progressive Web App — no native app, no app store, no
@@ -7,9 +11,9 @@ server required.
 
 ## Status
 
-🚧 Early development. See [Roadmap](docs/roadmap.md) for current and
-planned features. Not yet usable — v0.1 (single deck playback) is the
-first milestone in progress.
+🚧 Early development — v0.1.3 is the current release (single deck,
+playlist with persistence, loop mode, library management). See
+[Roadmap](docs/roadmap.md) for what's next.
 
 ## Features (planned, see roadmap for version breakdown)
 
@@ -52,8 +56,18 @@ architecture doc (once available) for details.
 
 ## Development
 
-No build step required for the core app — it's a static PWA. Details on
-running locally will be added once the initial scaffold exists.
+No build step required — it's a static PWA. To run locally:
+
+```bash
+cd src
+python3 -m http.server
+```
+
+Then open `http://localhost:8000` in Chrome or Firefox. ES modules and
+the Service Worker require `http://`, not `file://`.
+
+Deployments to GitHub Pages happen automatically on every push to `main`
+via `.github/workflows/deploy.yml`.
 
 ## License
 
