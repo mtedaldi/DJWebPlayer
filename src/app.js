@@ -61,7 +61,6 @@ const el = {
   loopBtn: document.getElementById('deck-loop'),
   volumeSlider: document.getElementById('deck-volume-slider'),
 
-  appVersion: document.getElementById('app-version'),
   infoBtn: document.getElementById('info-btn'),
   aboutOverlay: document.getElementById('about-overlay'),
   aboutTitle: document.getElementById('about-title'),
@@ -586,7 +585,6 @@ function applyStaticStrings() {
   document.getElementById('playlist-title').textContent = t('playlist.title');
   document.getElementById('danger-title').textContent = t('danger.title');
 
-  el.appVersion.textContent = `v${APP_VERSION}`;
   el.infoBtn.textContent = `ℹ v${APP_VERSION}`;
   el.aboutTitle.textContent = t('about.title');
   el.aboutVersionLine.textContent = `${t('about.version')}: ${APP_VERSION}`;
