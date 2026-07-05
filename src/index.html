@@ -10,7 +10,7 @@
 </head>
 <body>
 
-  <!-- ── Side drawer: Library ───────────────────────────────────────── -->
+  <!-- ── Side drawer: Library ───────────────────────────────────── -->
   <div id="drawer-overlay" class="drawer-overlay" hidden></div>
 
   <aside id="library-drawer" class="library-drawer" aria-label="Library" aria-hidden="true">
@@ -18,27 +18,24 @@
       <h2 id="library-title"></h2>
       <button id="drawer-close" class="drawer-close" aria-label="Close library">✕</button>
     </div>
-
     <div class="panel-actions">
       <button id="library-import-folder"></button>
       <button id="library-import-files"></button>
     </div>
     <input id="folder-input" type="file" webkitdirectory hidden>
-    <input id="file-input" type="file" accept="audio/*,.mp3,.wav,.ogg,.oga,.flac,.m4a,.aac,.weba,.opus" multiple hidden>
-
+    <input id="file-input" type="file"
+           accept="audio/*,.mp3,.wav,.ogg,.oga,.flac,.m4a,.aac,.weba,.opus"
+           multiple hidden>
     <div class="library-toolbar">
       <input id="library-search" type="search" class="search-input">
     </div>
-
     <div class="library-bulk-bar">
       <button id="library-select-all"></button>
       <button id="library-remove-selected" disabled></button>
       <button id="library-clear" class="is-danger"></button>
     </div>
-
     <p id="library-empty" class="empty-hint"></p>
     <p id="library-no-results" class="empty-hint" hidden></p>
-
     <div class="library-table-wrap">
       <table id="library-table" class="library-table">
         <thead>
@@ -52,46 +49,79 @@
         <tbody id="library-tbody"></tbody>
       </table>
     </div>
-
     <div class="drawer-danger">
       <h3 id="danger-title"></h3>
       <button id="danger-reset" class="is-danger"></button>
     </div>
   </aside>
 
-  <!-- ── App shell ──────────────────────────────────────────────────── -->
+  <!-- ── App shell ──────────────────────────────────────────────── -->
   <div class="app-shell">
-
     <header class="app-header">
       <button id="burger-btn" class="burger-btn" aria-label="Open library">☰</button>
       <h1>DJWebPlayer</h1>
-      <button id="info-btn" class="info-btn" aria-label="About">ℹ v0.1.3</button>
+      <button id="info-btn" class="info-btn" aria-label="About">ℹ v0.2.0</button>
     </header>
 
     <main class="app-main">
 
-      <!-- Deck -->
-      <section class="deck-panel" aria-label="Deck">
-        <div id="deck-track-name" class="deck-track-name is-empty"></div>
-
-        <div id="deck-progress" class="deck-progress" role="slider" aria-label="Seek">
-          <div id="deck-progress-fill" class="deck-progress-fill"></div>
-        </div>
-
-        <div class="deck-times">
-          <span id="deck-current-time">0:00</span>
-          <span id="deck-duration">0:00</span>
-        </div>
-
-        <div class="deck-controls">
-          <button id="deck-play" class="is-primary"></button>
-          <button id="deck-stop"></button>
-          <button id="deck-skip"></button>
-          <button id="deck-loop" class="btn-toggle"></button>
-          <div class="deck-volume">
-            <span>Vol</span>
-            <input id="deck-volume-slider" type="range" min="0" max="1" step="0.01" value="0.8">
+      <!-- Two decks -->
+      <div class="decks-row">
+        <section class="deck-panel deck-a" aria-label="Deck A">
+          <div class="deck-label" id="deck-a-label"></div>
+          <div class="deck-track-name is-empty" id="deck-a-track"></div>
+          <div class="deck-progress" id="deck-a-progress">
+            <div class="deck-progress-fill" id="deck-a-fill"></div>
           </div>
+          <div class="deck-times">
+            <span id="deck-a-current">0:00</span>
+            <span id="deck-a-duration">0:00</span>
+          </div>
+          <div class="deck-controls">
+            <button id="deck-a-play" class="is-primary"></button>
+            <button id="deck-a-stop"></button>
+            <button id="deck-a-skip"></button>
+          </div>
+          <div class="deck-volume-row">
+            <span class="vol-label">Vol</span>
+            <input id="deck-a-volume" type="range" min="0" max="1" step="0.01" value="0.8">
+          </div>
+        </section>
+
+        <section class="deck-panel deck-b" aria-label="Deck B">
+          <div class="deck-label" id="deck-b-label"></div>
+          <div class="deck-track-name is-empty" id="deck-b-track"></div>
+          <div class="deck-progress" id="deck-b-progress">
+            <div class="deck-progress-fill" id="deck-b-fill"></div>
+          </div>
+          <div class="deck-times">
+            <span id="deck-b-current">0:00</span>
+            <span id="deck-b-duration">0:00</span>
+          </div>
+          <div class="deck-controls">
+            <button id="deck-b-play" class="is-primary"></button>
+            <button id="deck-b-stop"></button>
+            <button id="deck-b-skip"></button>
+          </div>
+          <div class="deck-volume-row">
+            <span class="vol-label">Vol</span>
+            <input id="deck-b-volume" type="range" min="0" max="1" step="0.01" value="0.8">
+          </div>
+        </section>
+      </div>
+
+      <!-- Crossfader -->
+      <section class="crossfader-panel">
+        <div class="crossfader-labels">
+          <span id="xf-label-a"></span>
+          <span id="xf-label-center"></span>
+          <span id="xf-label-b"></span>
+        </div>
+        <input id="crossfader" type="range" min="0" max="1" step="0.001"
+               value="0.5" class="crossfader-slider">
+        <div class="crossfader-controls">
+          <button id="loop-btn" class="btn-toggle"></button>
+          <button id="xf-center-btn" class="btn-small"></button>
         </div>
       </section>
 
@@ -108,7 +138,7 @@
     </main>
   </div>
 
-  <!-- ── Confirm overlay ────────────────────────────────────────────── -->
+  <!-- Confirm overlay -->
   <div id="confirm-overlay" class="confirm-overlay" hidden>
     <div class="confirm-box">
       <p id="confirm-message"></p>
@@ -119,12 +149,13 @@
     </div>
   </div>
 
-  <!-- ── About dialog ──────────────────────────────────────────────── -->
+  <!-- About dialog -->
   <div id="about-overlay" class="confirm-overlay" hidden>
     <div class="confirm-box about-box">
       <h2 id="about-title"></h2>
       <p id="about-version-line"></p>
-      <p><a id="about-repo-link" href="https://github.com/mtedaldi/DJWebPlayer/tree/main"
+      <p><a id="about-repo-link"
+            href="https://github.com/mtedaldi/DJWebPlayer/tree/main"
             target="_blank" rel="noopener"></a></p>
       <div class="confirm-actions">
         <button id="about-close" class="is-primary"></button>

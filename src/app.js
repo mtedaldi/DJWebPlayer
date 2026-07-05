@@ -1,85 +1,175 @@
 import { t } from './i18n.js';
 import {
-  addTrack,
-  listTracks,
-  getTrackBlob,
-  deleteTracks,
-  clearLibrary,
-  resetDatabase,
-  getSetting,
-  setSetting,
+  addTrack, listTracks, getTrackBlob,
+  deleteTracks, clearLibrary, resetDatabase,
+  getSetting, setSetting,
 } from './storage.js';
 import { Deck } from './deck.js';
 import { Playlist } from './playlist.js';
 
-const APP_VERSION = '0.1.3';
+// ---- Constants ----
+
+const APP_VERSION = '0.2.0';
+
+// ---- Audio context + decks ----
+// AudioContext is created lazily on first user gesture to comply with
+// browser autoplay policy.
+
+let audioCtx = null;
+let deckA = null;
+let deckB = null;
+let masterGain = null;
+
+function ensureAudioContext() {
+  if (audioCtx) return;
+  audioCtx = new AudioContext();
+  masterGain = audioCtx.createGain();
+  masterGain.connect(audioCtx.destination);
+
+  deckA = new Deck(audioCtx, {
+    onEnded:     () => handleTrackEnded('a'),
+    onTimeUpdate: () => updateDeckUI('a'),
+    onLoaded:    () => updateDeckUI('a'),
+  });
+  deckB = new Deck(audioCtx, {
+    onEnded:     () => handleTrackEnded('b'),
+    onTimeUpdate: () => updateDeckUI('b'),
+    onLoaded:    () => updateDeckUI('b'),
+  });
+
+  deckA.gainNode.connect(masterGain);
+  deckB.gainNode.connect(masterGain);
+
+  // Apply current crossfader position to initial gains
+  applyCrossfader(parseFloat(el.crossfader.value));
+}
+
+// ---- State ----
 
 const playlist = new Playlist();
-let library = []; // cached track metadata list, unsorted/unfiltered (source of truth)
+let library        = [];
 let librarySearchTerm = '';
-let librarySortKey = 'addedAt';
-let librarySortAsc = true;
+let librarySortKey    = 'addedAt';
+let librarySortAsc    = true;
 const selectedLibraryIds = new Set();
 let loopEnabled = false;
 
-const deck = new Deck({
-  onEnded: handleTrackEnded,
-  onTimeUpdate: updateDeckProgress,
-  onLoaded: updateDeckProgress,
-});
+// Which deck is "active" (follows playlist auto-advance)?
+// The other deck is "free" (can be loaded manually or pre-loaded).
+let activeDeck = 'a'; // 'a' | 'b'
 
 // ---- DOM refs ----
 
 const el = {
+  // Library drawer
+  burgerBtn:       document.getElementById('burger-btn'),
+  drawerOverlay:   document.getElementById('drawer-overlay'),
+  libraryDrawer:   document.getElementById('library-drawer'),
+  drawerClose:     document.getElementById('drawer-close'),
   libraryImportFolder: document.getElementById('library-import-folder'),
-  libraryImportFiles: document.getElementById('library-import-files'),
-  folderInput: document.getElementById('folder-input'),
-  fileInput: document.getElementById('file-input'),
-  librarySearch: document.getElementById('library-search'),
-  librarySelectAll: document.getElementById('library-select-all'),
+  libraryImportFiles:  document.getElementById('library-import-files'),
+  folderInput:     document.getElementById('folder-input'),
+  fileInput:       document.getElementById('file-input'),
+  librarySearch:   document.getElementById('library-search'),
+  librarySelectAll:     document.getElementById('library-select-all'),
   libraryRemoveSelected: document.getElementById('library-remove-selected'),
-  libraryClear: document.getElementById('library-clear'),
-  libraryTbody: document.getElementById('library-tbody'),
+  libraryClear:    document.getElementById('library-clear'),
+  libraryTbody:    document.getElementById('library-tbody'),
   libraryCheckAll: document.getElementById('library-check-all'),
-  thName: document.getElementById('th-name'),
-  thDuration: document.getElementById('th-duration'),
-  libraryEmpty: document.getElementById('library-empty'),
+  thName:          document.getElementById('th-name'),
+  thDuration:      document.getElementById('th-duration'),
+  libraryEmpty:    document.getElementById('library-empty'),
   libraryNoResults: document.getElementById('library-no-results'),
 
-  playlistClear: document.getElementById('playlist-clear'),
-  playlistList: document.getElementById('playlist-list'),
-  playlistEmpty: document.getElementById('playlist-empty'),
+  // Deck A
+  deckALabel:    document.getElementById('deck-a-label'),
+  deckATrack:    document.getElementById('deck-a-track'),
+  deckAProgress: document.getElementById('deck-a-progress'),
+  deckAFill:     document.getElementById('deck-a-fill'),
+  deckACurrent:  document.getElementById('deck-a-current'),
+  deckADuration: document.getElementById('deck-a-duration'),
+  deckAPlay:     document.getElementById('deck-a-play'),
+  deckAStop:     document.getElementById('deck-a-stop'),
+  deckASkip:     document.getElementById('deck-a-skip'),
+  deckAVolume:   document.getElementById('deck-a-volume'),
 
-  deckTrackName: document.getElementById('deck-track-name'),
-  deckProgress: document.getElementById('deck-progress'),
-  deckProgressFill: document.getElementById('deck-progress-fill'),
-  deckCurrentTime: document.getElementById('deck-current-time'),
-  deckDuration: document.getElementById('deck-duration'),
-  playBtn: document.getElementById('deck-play'),
-  stopBtn: document.getElementById('deck-stop'),
-  skipBtn: document.getElementById('deck-skip'),
-  loopBtn: document.getElementById('deck-loop'),
-  volumeSlider: document.getElementById('deck-volume-slider'),
+  // Deck B
+  deckBLabel:    document.getElementById('deck-b-label'),
+  deckBTrack:    document.getElementById('deck-b-track'),
+  deckBProgress: document.getElementById('deck-b-progress'),
+  deckBFill:     document.getElementById('deck-b-fill'),
+  deckBCurrent:  document.getElementById('deck-b-current'),
+  deckBDuration: document.getElementById('deck-b-duration'),
+  deckBPlay:     document.getElementById('deck-b-play'),
+  deckBStop:     document.getElementById('deck-b-stop'),
+  deckBSkip:     document.getElementById('deck-b-skip'),
+  deckBVolume:   document.getElementById('deck-b-volume'),
 
-  infoBtn: document.getElementById('info-btn'),
-  aboutOverlay: document.getElementById('about-overlay'),
-  aboutTitle: document.getElementById('about-title'),
+  // Crossfader + controls
+  crossfader:    document.getElementById('crossfader'),
+  xfLabelA:      document.getElementById('xf-label-a'),
+  xfLabelCenter: document.getElementById('xf-label-center'),
+  xfLabelB:      document.getElementById('xf-label-b'),
+  xfCenterBtn:   document.getElementById('xf-center-btn'),
+  loopBtn:       document.getElementById('loop-btn'),
+
+  // Playlist
+  playlistTitle:  document.getElementById('playlist-title'),
+  playlistClear:  document.getElementById('playlist-clear'),
+  playlistEmpty:  document.getElementById('playlist-empty'),
+  playlistList:   document.getElementById('playlist-list'),
+
+  // Danger
+  dangerReset:   document.getElementById('danger-reset'),
+
+  // Overlays
+  infoBtn:         document.getElementById('info-btn'),
+  aboutOverlay:    document.getElementById('about-overlay'),
+  aboutTitle:      document.getElementById('about-title'),
   aboutVersionLine: document.getElementById('about-version-line'),
-  aboutRepoLink: document.getElementById('about-repo-link'),
-  aboutClose: document.getElementById('about-close'),
-
-  dangerReset: document.getElementById('danger-reset'),
-
-  burgerBtn: document.getElementById('burger-btn'),
-  drawerOverlay: document.getElementById('drawer-overlay'),
-  libraryDrawer: document.getElementById('library-drawer'),
-  drawerClose: document.getElementById('drawer-close'),
-
-  confirmOverlay: document.getElementById('confirm-overlay'),
-  confirmMessage: document.getElementById('confirm-message'),
-  confirmCancel: document.getElementById('confirm-cancel'),
-  confirmOk: document.getElementById('confirm-ok'),
+  aboutRepoLink:   document.getElementById('about-repo-link'),
+  aboutClose:      document.getElementById('about-close'),
+  confirmOverlay:  document.getElementById('confirm-overlay'),
+  confirmMessage:  document.getElementById('confirm-message'),
+  confirmCancel:   document.getElementById('confirm-cancel'),
+  confirmOk:       document.getElementById('confirm-ok'),
 };
+
+// ---- Helpers ----
+
+function formatTime(s) {
+  if (!isFinite(s) || s < 0) s = 0;
+  const m = Math.floor(s / 60);
+  return `${m}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+}
+
+function displayName(track) {
+  return track.name.replace(/\.[^/.]+$/, '');
+}
+
+function getDeck(id) { return id === 'a' ? deckA : deckB; }
+
+function freeDeck() { return activeDeck === 'a' ? 'b' : 'a'; }
+
+// ---- Crossfader (equal-power) ----
+
+function applyCrossfader(value) {
+  // value: 0 = full A, 0.5 = equal, 1 = full B
+  if (!deckA || !deckB) return;
+  const angle = value * Math.PI / 2;        // 0 .. π/2
+  deckA.gainNode.gain.value = Math.cos(angle);
+  deckB.gainNode.gain.value = Math.sin(angle);
+}
+
+el.crossfader.addEventListener('input', (e) => {
+  ensureAudioContext();
+  applyCrossfader(parseFloat(e.target.value));
+});
+
+el.xfCenterBtn.addEventListener('click', () => {
+  el.crossfader.value = '0.5';
+  applyCrossfader(0.5);
+});
 
 // ---- Drawer ----
 
@@ -89,96 +179,25 @@ function openDrawer() {
   el.libraryDrawer.setAttribute('aria-hidden', 'false');
   el.drawerClose.focus();
 }
-
 function closeDrawer() {
   el.libraryDrawer.classList.remove('is-open');
   el.drawerOverlay.hidden = true;
   el.libraryDrawer.setAttribute('aria-hidden', 'true');
   el.burgerBtn.focus();
 }
-
 el.burgerBtn.addEventListener('click', openDrawer);
 el.drawerClose.addEventListener('click', closeDrawer);
 el.drawerOverlay.addEventListener('click', closeDrawer);
-
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && el.libraryDrawer.classList.contains('is-open')) {
-    closeDrawer();
-  }
+  if (e.key === 'Escape' && el.libraryDrawer.classList.contains('is-open')) closeDrawer();
 });
 
-// ---- Playlist persistence ----
-
-async function savePlaylistState() {
-  await setSetting('playlist', {
-    items: playlist.items,
-    currentIndex: playlist.currentIndex,
-  });
-}
-
-async function loadPlaylistState() {
-  const saved = await getSetting('playlist');
-  if (!saved) return;
-  // Only restore track ids that still exist in the library
-  const libraryIds = new Set(library.map((t2) => t2.id));
-  playlist.items = (saved.items || []).filter((id) => libraryIds.has(id));
-  const idx = saved.currentIndex ?? -1;
-  playlist.currentIndex = idx < playlist.items.length ? idx : -1;
-}
-
-// ---- Loop ----
-
-function updateLoopButton() {
-  el.loopBtn.classList.toggle('is-active', loopEnabled);
-}
-
-el.loopBtn.addEventListener('click', async () => {
-  loopEnabled = !loopEnabled;
-  updateLoopButton();
-  await setSetting('loop', loopEnabled);
-});
-
-// ---- About dialog ----
-
-el.infoBtn.addEventListener('click', () => {
-  el.aboutOverlay.hidden = false;
-  el.aboutClose.focus();
-});
-
-el.aboutClose.addEventListener('click', () => {
-  el.aboutOverlay.hidden = true;
-  el.infoBtn.focus();
-});
-
-el.aboutOverlay.addEventListener('click', (e) => {
-  if (e.target === el.aboutOverlay) {
-    el.aboutOverlay.hidden = true;
-    el.infoBtn.focus();
-  }
-});
-
-// ---- Formatting helpers ----
-
-function formatTime(seconds) {
-  if (!isFinite(seconds) || seconds < 0) seconds = 0;
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
-function displayName(track) {
-  return track.name.replace(/\.[^/.]+$/, '');
-}
-
-// ---- Confirmation dialog ----
-// A themed in-app overlay instead of window.confirm(), so it matches the
-// dark UI and works well on tablets.
+// ---- Confirm dialog ----
 
 function confirmAction(message) {
   return new Promise((resolve) => {
     el.confirmMessage.textContent = message;
     el.confirmOverlay.hidden = false;
-
     const cleanup = (result) => {
       el.confirmOverlay.hidden = true;
       el.confirmOk.removeEventListener('click', onOk);
@@ -187,11 +206,38 @@ function confirmAction(message) {
     };
     const onOk = () => cleanup(true);
     const onCancel = () => cleanup(false);
-
     el.confirmOk.addEventListener('click', onOk);
     el.confirmCancel.addEventListener('click', onCancel);
   });
 }
+
+// ---- About ----
+
+el.infoBtn.addEventListener('click', () => {
+  el.aboutOverlay.hidden = false;
+  el.aboutClose.focus();
+});
+el.aboutClose.addEventListener('click', () => {
+  el.aboutOverlay.hidden = true;
+  el.infoBtn.focus();
+});
+el.aboutOverlay.addEventListener('click', (e) => {
+  if (e.target === el.aboutOverlay) {
+    el.aboutOverlay.hidden = true;
+    el.infoBtn.focus();
+  }
+});
+
+// ---- Loop ----
+
+function updateLoopButton() {
+  el.loopBtn.classList.toggle('is-active', loopEnabled);
+}
+el.loopBtn.addEventListener('click', async () => {
+  loopEnabled = !loopEnabled;
+  updateLoopButton();
+  await setSetting('loop', loopEnabled);
+});
 
 // ---- Library ----
 
@@ -202,32 +248,22 @@ async function refreshLibrary() {
 
 function getVisibleTracks() {
   const term = librarySearchTerm.trim().toLowerCase();
-  let tracks = library;
-
-  if (term) {
-    tracks = tracks.filter((track) => displayName(track).toLowerCase().includes(term));
-  }
-
+  let tracks = term
+    ? library.filter((tr) => displayName(tr).toLowerCase().includes(term))
+    : library;
   const sorted = [...tracks];
   const dir = librarySortAsc ? 1 : -1;
   switch (librarySortKey) {
-    case 'name':
-      sorted.sort((a, b) => dir * displayName(a).localeCompare(displayName(b)));
-      break;
-    case 'duration':
-      sorted.sort((a, b) => dir * ((a.duration || 0) - (b.duration || 0)));
-      break;
-    case 'addedAt':
-    default:
-      sorted.sort((a, b) => dir * (a.addedAt - b.addedAt));
-      break;
+    case 'name':     sorted.sort((a, b) => dir * displayName(a).localeCompare(displayName(b))); break;
+    case 'duration': sorted.sort((a, b) => dir * ((a.duration || 0) - (b.duration || 0))); break;
+    default:         sorted.sort((a, b) => dir * (a.addedAt - b.addedAt)); break;
   }
   return sorted;
 }
 
 function updateSortHeaders() {
   const arrow = librarySortAsc ? ' ▲' : ' ▼';
-  el.thName.textContent = t('library.colName') + (librarySortKey === 'name' ? arrow : '');
+  el.thName.textContent     = t('library.colName')     + (librarySortKey === 'name'     ? arrow : '');
   el.thDuration.textContent = t('library.colDuration') + (librarySortKey === 'duration' ? arrow : '');
   el.thName.classList.toggle('is-sorted', librarySortKey === 'name');
   el.thDuration.classList.toggle('is-sorted', librarySortKey === 'duration');
@@ -236,16 +272,15 @@ function updateSortHeaders() {
 function updateBulkBar() {
   el.libraryRemoveSelected.disabled = selectedLibraryIds.size === 0;
   const visible = getVisibleTracks();
-  const allSelected = visible.length > 0 && visible.every((t2) => selectedLibraryIds.has(t2.id));
+  const allSelected = visible.length > 0 && visible.every((tr) => selectedLibraryIds.has(tr.id));
   el.librarySelectAll.textContent = allSelected ? t('library.deselectAll') : t('library.selectAll');
   if (el.libraryCheckAll) el.libraryCheckAll.checked = allSelected;
 }
 
 function renderLibrary() {
   const visible = getVisibleTracks();
-
   el.libraryTbody.innerHTML = '';
-  el.libraryEmpty.hidden = library.length > 0;
+  el.libraryEmpty.hidden    = library.length > 0;
   el.libraryNoResults.hidden = !(library.length > 0 && visible.length === 0);
   updateSortHeaders();
 
@@ -253,7 +288,6 @@ function renderLibrary() {
     const tr = document.createElement('tr');
     if (selectedLibraryIds.has(track.id)) tr.classList.add('is-selected');
 
-    // Checkbox cell
     const tdCheck = document.createElement('td');
     tdCheck.className = 'col-check';
     const cb = document.createElement('input');
@@ -267,7 +301,6 @@ function renderLibrary() {
     tdCheck.appendChild(cb);
     tr.appendChild(tdCheck);
 
-    // Name cell
     const tdName = document.createElement('td');
     tdName.className = 'col-name';
     const nameSpan = document.createElement('span');
@@ -275,13 +308,11 @@ function renderLibrary() {
     tdName.appendChild(nameSpan);
     tr.appendChild(tdName);
 
-    // Duration cell
     const tdDur = document.createElement('td');
     tdDur.className = 'col-duration';
     tdDur.textContent = track.duration ? formatTime(track.duration) : '—';
     tr.appendChild(tdDur);
 
-    // Add-to-playlist button cell
     const tdBtn = document.createElement('td');
     tdBtn.className = 'col-actions';
     const addBtn = document.createElement('button');
@@ -290,85 +321,66 @@ function renderLibrary() {
     addBtn.addEventListener('click', () => {
       playlist.add(track.id);
       renderPlaylist();
-    });    tdBtn.appendChild(addBtn);
+    });
+    tdBtn.appendChild(addBtn);
     tr.appendChild(tdBtn);
 
     el.libraryTbody.appendChild(tr);
   }
-
   updateBulkBar();
 }
 
-const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.oga', '.flac', '.m4a', '.aac', '.weba', '.opus'];
-
+const AUDIO_EXTENSIONS = ['.mp3','.wav','.ogg','.oga','.flac','.m4a','.aac','.weba','.opus'];
 function looksLikeAudio(file) {
   if (file.type && file.type.startsWith('audio/')) return true;
-  const lowerName = file.name.toLowerCase();
-  return AUDIO_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
+  const ln = file.name.toLowerCase();
+  return AUDIO_EXTENSIONS.some((ext) => ln.endsWith(ext));
 }
 
 async function importFiles(fileList) {
   const files = Array.from(fileList).filter(looksLikeAudio);
-  let skippedCount = 0;
-
+  let skipped = 0;
   for (const file of files) {
-    const { skipped } = await addTrack(file);
-    if (skipped) skippedCount += 1;
+    const { skipped: s } = await addTrack(file);
+    if (s) skipped++;
   }
-
   await refreshLibrary();
-
-  if (skippedCount > 0) {
-    // Lightweight, non-blocking notice; doesn't interrupt the import flow.
-    console.info(t('library.importSkippedDuplicates', { count: skippedCount }));
-  }
+  if (skipped > 0) console.info(t('library.importSkippedDuplicates', { count: skipped }));
 }
 
 el.libraryImportFolder.addEventListener('click', () => el.folderInput.click());
-el.libraryImportFiles.addEventListener('click', () => el.fileInput.click());
+el.libraryImportFiles.addEventListener('click',  () => el.fileInput.click());
 el.folderInput.addEventListener('change', (e) => importFiles(e.target.files));
-el.fileInput.addEventListener('change', (e) => importFiles(e.target.files));
+el.fileInput.addEventListener('change',   (e) => importFiles(e.target.files));
 
 el.librarySearch.addEventListener('input', (e) => {
   librarySearchTerm = e.target.value;
   renderLibrary();
 });
 
-// Sortable column headers
 document.querySelectorAll('.library-table th.sortable').forEach((th) => {
   th.addEventListener('click', () => {
     const key = th.dataset.sort;
-    if (librarySortKey === key) {
-      librarySortAsc = !librarySortAsc;
-    } else {
-      librarySortKey = key;
-      librarySortAsc = true;
-    }
+    if (librarySortKey === key) librarySortAsc = !librarySortAsc;
+    else { librarySortKey = key; librarySortAsc = true; }
     renderLibrary();
   });
 });
 
-// Header checkbox: select/deselect all visible
 if (el.libraryCheckAll) {
   el.libraryCheckAll.addEventListener('change', () => {
-    const visibleIds = getVisibleTracks().map((t2) => t2.id);
-    if (el.libraryCheckAll.checked) {
-      visibleIds.forEach((id) => selectedLibraryIds.add(id));
-    } else {
-      visibleIds.forEach((id) => selectedLibraryIds.delete(id));
-    }
+    const visibleIds = getVisibleTracks().map((tr) => tr.id);
+    if (el.libraryCheckAll.checked) visibleIds.forEach((id) => selectedLibraryIds.add(id));
+    else visibleIds.forEach((id) => selectedLibraryIds.delete(id));
     renderLibrary();
   });
 }
 
 el.librarySelectAll.addEventListener('click', () => {
-  const visibleIds = getVisibleTracks().map((t2) => t2.id);
+  const visibleIds = getVisibleTracks().map((tr) => tr.id);
   const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedLibraryIds.has(id));
-  if (allSelected) {
-    for (const id of visibleIds) selectedLibraryIds.delete(id);
-  } else {
-    for (const id of visibleIds) selectedLibraryIds.add(id);
-  }
+  if (allSelected) visibleIds.forEach((id) => selectedLibraryIds.delete(id));
+  else visibleIds.forEach((id) => selectedLibraryIds.add(id));
   renderLibrary();
 });
 
@@ -387,16 +399,34 @@ el.libraryClear.addEventListener('click', async () => {
   const ok = await confirmAction(t('library.clearConfirm'));
   if (!ok) return;
   await clearLibrary();
-  playlist.removeByTrackIds(library.map((t2) => t2.id));
+  playlist.removeByTrackIds(library.map((tr) => tr.id));
   selectedLibraryIds.clear();
   await refreshLibrary();
   renderPlaylist();
 });
 
-// ---- Playlist ----
+// ---- Playlist persistence ----
+
+async function savePlaylistState() {
+  await setSetting('playlist', {
+    items: playlist.items,
+    currentIndex: playlist.currentIndex,
+  });
+}
+
+async function loadPlaylistState() {
+  const saved = await getSetting('playlist');
+  if (!saved) return;
+  const libraryIds = new Set(library.map((tr) => tr.id));
+  playlist.items = (saved.items || []).filter((id) => libraryIds.has(id));
+  const idx = saved.currentIndex ?? -1;
+  playlist.currentIndex = idx < playlist.items.length ? idx : -1;
+}
+
+// ---- Playlist rendering ----
 
 function findTrackMeta(trackId) {
-  return library.find((t2) => t2.id === trackId);
+  return library.find((tr) => tr.id === trackId);
 }
 
 function renderPlaylist(save = true) {
@@ -406,7 +436,13 @@ function renderPlaylist(save = true) {
   playlist.items.forEach((trackId, index) => {
     const meta = findTrackMeta(trackId);
     const li = document.createElement('li');
-    li.className = 'item-row' + (index === playlist.currentIndex ? ' is-current' : '');
+
+    // Highlight the row if it's loaded on either deck
+    const onA = deckA && deckA.currentTrackId === trackId;
+    const onB = deckB && deckB.currentTrackId === trackId;
+    li.className = 'item-row' +
+      (onA ? ' is-current-a' : '') +
+      (onB ? ' is-current-b' : '');
 
     const name = document.createElement('span');
     name.className = 'item-name';
@@ -414,36 +450,28 @@ function renderPlaylist(save = true) {
     li.appendChild(name);
 
     const upBtn = document.createElement('button');
-    upBtn.textContent = '↑';
-    upBtn.title = t('playlist.moveUp');
-    upBtn.addEventListener('click', () => {
-      playlist.moveUp(index);
-      renderPlaylist();
-    });
+    upBtn.textContent = '↑'; upBtn.title = t('playlist.moveUp');
+    upBtn.addEventListener('click', () => { playlist.moveUp(index); renderPlaylist(); });
     li.appendChild(upBtn);
 
     const downBtn = document.createElement('button');
-    downBtn.textContent = '↓';
-    downBtn.title = t('playlist.moveDown');
-    downBtn.addEventListener('click', () => {
-      playlist.moveDown(index);
-      renderPlaylist();
-    });
+    downBtn.textContent = '↓'; downBtn.title = t('playlist.moveDown');
+    downBtn.addEventListener('click', () => { playlist.moveDown(index); renderPlaylist(); });
     li.appendChild(downBtn);
 
     const removeBtn = document.createElement('button');
-    removeBtn.textContent = '✕';
-    removeBtn.title = t('playlist.remove');
-    removeBtn.addEventListener('click', () => {
-      playlist.removeAt(index);
-      renderPlaylist();
-    });
+    removeBtn.textContent = '✕'; removeBtn.title = t('playlist.remove');
+    removeBtn.addEventListener('click', () => { playlist.removeAt(index); renderPlaylist(); });
     li.appendChild(removeBtn);
 
+    // Double-click: load onto active deck
     li.addEventListener('dblclick', () => {
+      ensureAudioContext();
       playlist.setCurrentIndex(index);
-      loadCurrentTrack().then(() => deck.play());
-      renderPlaylist();
+      loadTrackOnDeck(activeDeck, trackId).then(() => {
+        getDeck(activeDeck).play();
+        renderPlaylist();
+      });
     });
 
     el.playlistList.appendChild(li);
@@ -456,118 +484,157 @@ el.playlistClear.addEventListener('click', async () => {
   if (playlist.items.length === 0) return;
   const ok = await confirmAction(t('playlist.clearConfirm'));
   if (!ok) return;
-  deck.stop();
+  if (deckA) deckA.stop();
+  if (deckB) deckB.stop();
   playlist.clear();
-  el.deckTrackName.textContent = t('deck.noTrack');
-  el.deckTrackName.classList.add('is-empty');
-  updateDeckProgress();
+  updateDeckUI('a');
+  updateDeckUI('b');
   renderPlaylist();
 });
 
-// ---- Deck ----
+// ---- Deck UI helpers ----
 
-async function loadCurrentTrack() {
-  const trackId = playlist.currentTrackId;
-  if (!trackId) return;
+function deckEls(id) {
+  return id === 'a'
+    ? { track: el.deckATrack, fill: el.deckAFill, current: el.deckACurrent,
+        duration: el.deckADuration, play: el.deckAPlay }
+    : { track: el.deckBTrack, fill: el.deckBFill, current: el.deckBCurrent,
+        duration: el.deckBDuration, play: el.deckBPlay };
+}
+
+function updateDeckUI(id) {
+  const deck = getDeck(id);
+  const e    = deckEls(id);
+  if (!deck) return;
+
+  const dur  = deck.duration;
+  const cur  = deck.currentTime;
+  const pct  = dur > 0 ? (cur / dur) * 100 : 0;
+  e.fill.style.width    = `${pct}%`;
+  e.current.textContent = formatTime(cur);
+  e.duration.textContent = formatTime(dur);
+  e.play.textContent = deck.isPlaying ? t('deck.pause') : t('deck.play');
+
+  if (deck.currentTrackId) {
+    const meta = findTrackMeta(deck.currentTrackId);
+    e.track.textContent = meta ? displayName(meta) : deck.trackName || '—';
+    e.track.classList.remove('is-empty');
+  } else {
+    e.track.textContent = t('deck.noTrack');
+    e.track.classList.add('is-empty');
+  }
+}
+
+// ---- Load track onto a specific deck ----
+
+async function loadTrackOnDeck(deckId, trackId) {
+  ensureAudioContext();
   const blob = await getTrackBlob(trackId);
   if (!blob) return;
-  deck.load(trackId, blob);
   const meta = findTrackMeta(trackId);
-  el.deckTrackName.textContent = meta ? displayName(meta) : t('deck.noTrack');
-  el.deckTrackName.classList.remove('is-empty');
-  renderPlaylist();
+  await getDeck(deckId).load(trackId, blob, meta ? displayName(meta) : '');
+  updateDeckUI(deckId);
+  renderPlaylist(false);
 }
 
-function updateDeckProgress() {
-  const duration = deck.duration;
-  const current = deck.currentTime;
-  const pct = duration > 0 ? (current / duration) * 100 : 0;
-  el.deckProgressFill.style.width = `${pct}%`;
-  el.deckCurrentTime.textContent = formatTime(current);
-  el.deckDuration.textContent = formatTime(duration);
-  el.playBtn.textContent = deck.isPlaying ? t('deck.pause') : t('deck.play');
-}
+// ---- Track ended handler ----
 
-async function handleTrackEnded() {
+async function handleTrackEnded(deckId) {
+  // Only the active deck drives playlist auto-advance
+  if (deckId !== activeDeck) return;
+
   const nextId = playlist.advance();
   if (nextId) {
-    await loadCurrentTrack();
-    deck.play();
+    // Load next track onto the same deck that just finished
+    await loadTrackOnDeck(activeDeck, nextId);
+    getDeck(activeDeck).play();
   } else if (loopEnabled && playlist.items.length > 0) {
     playlist.setCurrentIndex(0);
-    await loadCurrentTrack();
-    deck.play();
+    await loadTrackOnDeck(activeDeck, playlist.currentTrackId);
+    getDeck(activeDeck).play();
   } else {
-    updateDeckProgress();
+    updateDeckUI(activeDeck);
   }
   await savePlaylistState();
 }
 
-async function skipToNext() {
-  const nextId = playlist.advance();
-  if (nextId) {
-    const wasPlaying = deck.isPlaying;
-    await loadCurrentTrack();
-    if (wasPlaying) deck.play();
-    updateDeckProgress();
-    await savePlaylistState();
-  }
+// ---- Deck controls ----
+
+function wireDeckControls(id) {
+  const skipBtn  = id === 'a' ? el.deckASkip  : el.deckBSkip;
+  const stopBtn  = id === 'a' ? el.deckAStop  : el.deckBStop;
+  const playBtn  = id === 'a' ? el.deckAPlay  : el.deckBPlay;
+  const volSlider = id === 'a' ? el.deckAVolume : el.deckBVolume;
+  const progressEl = id === 'a' ? el.deckAProgress : el.deckBProgress;
+
+  playBtn.addEventListener('click', async () => {
+    ensureAudioContext();
+    const deck = getDeck(id);
+
+    if (!deck.currentTrackId) {
+      // Nothing loaded yet: load from playlist, set this deck as active
+      if (!playlist.currentTrackId) playlist.setCurrentIndex(0);
+      if (!playlist.currentTrackId) return;
+      activeDeck = id;
+      await loadTrackOnDeck(id, playlist.currentTrackId);
+      deck.play();
+    } else if (deck.isPlaying) {
+      deck.pause();
+    } else {
+      deck.play();
+    }
+    updateDeckUI(id);
+  });
+
+  stopBtn.addEventListener('click', () => {
+    if (!deckA) return;
+    getDeck(id).stop();
+    updateDeckUI(id);
+  });
+
+  skipBtn.addEventListener('click', async () => {
+    ensureAudioContext();
+    // Skip only advances when this deck is the active (playlist-following) one
+    if (id === activeDeck) {
+      const nextId = playlist.advance();
+      if (nextId) {
+        const wasPlaying = getDeck(id).isPlaying;
+        await loadTrackOnDeck(id, nextId);
+        if (wasPlaying) getDeck(id).play();
+        await savePlaylistState();
+      }
+    }
+  });
+
+  volSlider.addEventListener('input', (e) => {
+    ensureAudioContext();
+    getDeck(id).setVolume(parseFloat(e.target.value));
+  });
+
+  progressEl.addEventListener('click', (e) => {
+    if (!deckA) return;
+    const deck = getDeck(id);
+    if (!deck.duration) return;
+    const rect  = progressEl.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    deck.seek(ratio * deck.duration);
+  });
 }
 
-el.playBtn.addEventListener('click', async () => {
-  // Load a track if none is loaded yet, or if the playlist's current
-  // selection has moved on (e.g. via double-click or skip) without the
-  // deck following it.
-  if (!deck.currentTrackId || deck.currentTrackId !== playlist.currentTrackId) {
-    if (!playlist.currentTrackId) {
-      playlist.setCurrentIndex(0);
-    }
-    await loadCurrentTrack();
-    deck.play();
-    updateDeckProgress();
-    return;
-  }
-  if (deck.isPlaying) {
-    deck.pause();
-  } else {
-    deck.play();
-  }
-  updateDeckProgress();
-});
+wireDeckControls('a');
+wireDeckControls('b');
 
-el.skipBtn.addEventListener('click', () => {
-  skipToNext();
-});
-
-el.stopBtn.addEventListener('click', () => {
-  deck.stop();
-  updateDeckProgress();
-});
-
-el.deckProgress.addEventListener('click', (e) => {
-  if (!deck.duration) return;
-  const rect = el.deckProgress.getBoundingClientRect();
-  const ratio = (e.clientX - rect.left) / rect.width;
-  deck.seek(ratio * deck.duration);
-});
-
-el.volumeSlider.addEventListener('input', (e) => {
-  deck.setVolume(parseFloat(e.target.value));
-});
-
-// ---- Danger zone: full app reset ----
+// ---- Danger zone: reset ----
 
 el.dangerReset.addEventListener('click', async () => {
   const ok = await confirmAction(t('danger.resetConfirm'));
   if (!ok) return;
   el.dangerReset.disabled = true;
   el.dangerReset.textContent = t('danger.resetting');
-  deck.stop();
+  if (deckA) deckA.stop();
+  if (deckB) deckB.stop();
   try {
     await resetDatabase();
-    // A full reload re-initializes everything cleanly, including any
-    // service-worker-cached shell, rather than trying to reset in-memory
-    // state piecemeal.
     window.location.reload();
   } catch (err) {
     console.error('Reset failed:', err);
@@ -577,65 +644,71 @@ el.dangerReset.addEventListener('click', async () => {
   }
 });
 
-// ---- Init ----
+// ---- Static strings ----
 
 function applyStaticStrings() {
   document.title = t('app.title');
-  document.getElementById('library-title').textContent = t('library.title');
+  document.getElementById('library-title').textContent  = t('library.title');
   document.getElementById('playlist-title').textContent = t('playlist.title');
-  document.getElementById('danger-title').textContent = t('danger.title');
+  document.getElementById('danger-title').textContent   = t('danger.title');
 
   el.infoBtn.textContent = `ℹ v${APP_VERSION}`;
-  el.aboutTitle.textContent = t('about.title');
+  el.aboutTitle.textContent       = t('about.title');
   el.aboutVersionLine.textContent = `${t('about.version')}: ${APP_VERSION}`;
-  el.aboutRepoLink.textContent = t('about.repo');
-  el.aboutClose.textContent = t('about.close');
+  el.aboutRepoLink.textContent    = t('about.repo');
+  el.aboutClose.textContent       = t('about.close');
 
-  el.libraryImportFolder.textContent = t('library.import');
-  el.libraryImportFiles.textContent = t('library.importFiles');
-  el.libraryEmpty.textContent = t('library.empty');
-  el.libraryNoResults.textContent = t('library.noResults');
-  el.librarySearch.placeholder = t('library.search');
-  el.librarySelectAll.textContent = t('library.selectAll');
+  el.libraryImportFolder.textContent  = t('library.import');
+  el.libraryImportFiles.textContent   = t('library.importFiles');
+  el.libraryEmpty.textContent         = t('library.empty');
+  el.libraryNoResults.textContent     = t('library.noResults');
+  el.librarySearch.placeholder        = t('library.search');
+  el.librarySelectAll.textContent     = t('library.selectAll');
   el.libraryRemoveSelected.textContent = t('library.removeSelected');
-  el.libraryClear.textContent = t('library.clear');
+  el.libraryClear.textContent         = t('library.clear');
 
-  el.playlistEmpty.textContent = t('playlist.empty');
-  el.playlistClear.textContent = t('playlist.clear');
+  el.playlistEmpty.textContent  = t('playlist.empty');
+  el.playlistClear.textContent  = t('playlist.clear');
 
-  el.deckTrackName.textContent = t('deck.noTrack');
-  el.playBtn.textContent = t('deck.play');
-  el.stopBtn.textContent = t('deck.stop');
-  el.skipBtn.textContent = t('deck.skip');
-  el.loopBtn.textContent = `🔁 ${t('deck.loop')}`;
+  el.deckALabel.textContent = t('deck.a');
+  el.deckBLabel.textContent = t('deck.b');
 
-  el.dangerReset.textContent = t('danger.reset');
+  el.deckAPlay.textContent = t('deck.play');
+  el.deckAStop.textContent = t('deck.stop');
+  el.deckASkip.textContent = t('deck.skip');
+  el.deckBPlay.textContent = t('deck.play');
+  el.deckBStop.textContent = t('deck.stop');
+  el.deckBSkip.textContent = t('deck.skip');
+
+  el.loopBtn.textContent     = `🔁 ${t('deck.loop')}`;
+  el.xfCenterBtn.textContent = t('crossfader.center');
+  el.xfLabelA.textContent    = t('crossfader.toA');
+  el.xfLabelCenter.textContent = t('crossfader.label');
+  el.xfLabelB.textContent    = t('crossfader.toB');
+
+  el.dangerReset.textContent  = t('danger.reset');
   el.confirmCancel.textContent = t('common.cancel');
-  el.confirmOk.textContent = t('common.confirm');
+  el.confirmOk.textContent     = t('common.confirm');
 }
 
-applyStaticStrings();
-deck.setVolume(parseFloat(el.volumeSlider.value));
+// ---- Init ----
 
-// Load library first, then restore playlist (which validates against library)
-// and loop state from IndexedDB.
+applyStaticStrings();
+
 (async () => {
   await refreshLibrary();
 
   const savedLoop = await getSetting('loop');
-  if (savedLoop === true) {
-    loopEnabled = true;
-    updateLoopButton();
-  }
+  if (savedLoop === true) { loopEnabled = true; updateLoopButton(); }
 
   await loadPlaylistState();
-  renderPlaylist(false); // render without re-saving what we just loaded
+  renderPlaylist(false);
 })();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch((err) => {
-      console.error('Service worker registration failed:', err);
+      console.error('SW registration failed:', err);
     });
   });
 }
