@@ -54,9 +54,14 @@ let librarySortAsc    = true;
 const selectedLibraryIds = new Set();
 let loopEnabled = false;
 
-// Which deck is "active" (follows playlist auto-advance)?
-// The other deck is "free" (can be loaded manually or pre-loaded).
-let activeDeck = 'a'; // 'a' | 'b'
+// Which deck is "free" (not currently playing)?
+// Used by double-click to load onto the non-playing deck.
+function freeDeckId() {
+  if (!deckA || !deckB) return 'b';
+  if (!deckA.isPlaying) return 'a';
+  if (!deckB.isPlaying) return 'b';
+  return 'b'; // both playing: default to B
+}
 
 // ---- DOM refs ----
 
@@ -449,6 +454,28 @@ function renderPlaylist(save = true) {
     name.textContent = meta ? displayName(meta) : trackId;
     li.appendChild(name);
 
+    const loadABtn = document.createElement('button');
+    loadABtn.textContent = t('playlist.loadOnA');
+    loadABtn.title = t('playlist.loadOnA.title');
+    loadABtn.className = 'load-deck-a';
+    loadABtn.addEventListener('click', () => {
+      ensureAudioContext();
+      playlist.setCurrentIndex(index);
+      loadTrackOnDeck('a', trackId).then(() => renderPlaylist());
+    });
+    li.appendChild(loadABtn);
+
+    const loadBBtn = document.createElement('button');
+    loadBBtn.textContent = t('playlist.loadOnB');
+    loadBBtn.title = t('playlist.loadOnB.title');
+    loadBBtn.className = 'load-deck-b';
+    loadBBtn.addEventListener('click', () => {
+      ensureAudioContext();
+      playlist.setCurrentIndex(index);
+      loadTrackOnDeck('b', trackId).then(() => renderPlaylist());
+    });
+    li.appendChild(loadBBtn);
+
     const upBtn = document.createElement('button');
     upBtn.textContent = '↑'; upBtn.title = t('playlist.moveUp');
     upBtn.addEventListener('click', () => { playlist.moveUp(index); renderPlaylist(); });
@@ -464,14 +491,12 @@ function renderPlaylist(save = true) {
     removeBtn.addEventListener('click', () => { playlist.removeAt(index); renderPlaylist(); });
     li.appendChild(removeBtn);
 
-    // Double-click: load onto active deck
+    // Double-click: load onto the free (non-playing) deck
     li.addEventListener('dblclick', () => {
       ensureAudioContext();
+      const target = freeDeckId();
       playlist.setCurrentIndex(index);
-      loadTrackOnDeck(activeDeck, trackId).then(() => {
-        getDeck(activeDeck).play();
-        renderPlaylist();
-      });
+      loadTrackOnDeck(target, trackId).then(() => renderPlaylist());
     });
 
     el.playlistList.appendChild(li);
@@ -540,20 +565,16 @@ async function loadTrackOnDeck(deckId, trackId) {
 // ---- Track ended handler ----
 
 async function handleTrackEnded(deckId) {
-  // Only the active deck drives playlist auto-advance
-  if (deckId !== activeDeck) return;
-
   const nextId = playlist.advance();
   if (nextId) {
-    // Load next track onto the same deck that just finished
-    await loadTrackOnDeck(activeDeck, nextId);
-    getDeck(activeDeck).play();
+    await loadTrackOnDeck(deckId, nextId);
+    getDeck(deckId).play();
   } else if (loopEnabled && playlist.items.length > 0) {
     playlist.setCurrentIndex(0);
-    await loadTrackOnDeck(activeDeck, playlist.currentTrackId);
-    getDeck(activeDeck).play();
+    await loadTrackOnDeck(deckId, playlist.currentTrackId);
+    getDeck(deckId).play();
   } else {
-    updateDeckUI(activeDeck);
+    updateDeckUI(deckId);
   }
   await savePlaylistState();
 }
@@ -572,10 +593,8 @@ function wireDeckControls(id) {
     const deck = getDeck(id);
 
     if (!deck.currentTrackId) {
-      // Nothing loaded yet: load from playlist, set this deck as active
       if (!playlist.currentTrackId) playlist.setCurrentIndex(0);
       if (!playlist.currentTrackId) return;
-      activeDeck = id;
       await loadTrackOnDeck(id, playlist.currentTrackId);
       deck.play();
     } else if (deck.isPlaying) {
@@ -594,15 +613,12 @@ function wireDeckControls(id) {
 
   skipBtn.addEventListener('click', async () => {
     ensureAudioContext();
-    // Skip only advances when this deck is the active (playlist-following) one
-    if (id === activeDeck) {
-      const nextId = playlist.advance();
-      if (nextId) {
-        const wasPlaying = getDeck(id).isPlaying;
-        await loadTrackOnDeck(id, nextId);
-        if (wasPlaying) getDeck(id).play();
-        await savePlaylistState();
-      }
+    const nextId = playlist.advance();
+    if (nextId) {
+      const wasPlaying = getDeck(id).isPlaying;
+      await loadTrackOnDeck(id, nextId);
+      if (wasPlaying) getDeck(id).play();
+      await savePlaylistState();
     }
   });
 

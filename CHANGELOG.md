@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- v0.2.0: Two independent decks (Deck A amber, Deck B blue) —
+  - Web Audio API replaces HTMLAudioElement; shared AudioContext with
+    per-deck GainNode for precise volume control
+  - Equal-power crossfader (0 = full A, 0.5 = equal, 1 = full B)
+  - "Center" button snaps crossfader to 0.5
+  - Per-deck Play/Pause, Stop, Skip, Volume controls
+  - Deck-coloured progress bars and play buttons
+  - Playlist rows show A/B load buttons (amber/blue) to explicitly load
+    a track onto a specific deck
+  - Double-click a playlist row loads the track onto the free
+    (non-playing) deck
+  - Auto-advance on track end stays on the same deck that just finished
+  - No activeDeck concept: both decks are fully independent
+
+### Added
 - v0.1.3:
   - Playlist persistence: playlist survives page reload (stored in
     IndexedDB settings store); track ids that no longer exist in the

@@ -11,9 +11,21 @@ server required.
 
 ## Status
 
-🚧 Early development — v0.1.3 is the current release (single deck,
-playlist with persistence, loop mode, library management). See
+🚧 Active development — v0.2.0 is the current release (two independent
+decks with crossfader, playlist with A/B load buttons). See
 [Roadmap](docs/roadmap.md) for what's next.
+
+## Features (current)
+
+- Local music playback (your own files, nothing leaves the device)
+- Library with search, sort, multi-select, persistent across reloads
+- Playlist with persistent state, loop mode
+- **Two independent decks** (Deck A amber, Deck B blue)
+- **Equal-power crossfader** with center-snap button
+- Per-deck Play/Pause, Stop, Skip, Volume
+- Explicit A/B load buttons per playlist row; double-click loads onto
+  free deck
+- Fully offline after first load, installable as PWA
 
 ## Features (planned, see roadmap for version breakdown)
 

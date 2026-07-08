@@ -30,7 +30,10 @@ const STRINGS = {
     'library.noResults': 'No tracks match your search.',
     'library.importSkippedDuplicates': 'Skipped {count} duplicate(s) already in the library.',
 
-    'playlist.title': 'Playlist',
+    'playlist.loadOnA': 'A',
+    'playlist.loadOnB': 'B',
+    'playlist.loadOnA.title': 'Load on Deck A',
+    'playlist.loadOnB.title': 'Load on Deck B',
     'playlist.empty': 'Playlist is empty. Add tracks from your library.',
     'playlist.remove': 'Remove',
     'playlist.moveUp': 'Move up',
