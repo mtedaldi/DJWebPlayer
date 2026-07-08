@@ -145,6 +145,9 @@ support it (primarily Chromium-based).
 - Import progress feedback: show a spinner or "Importing… (n/m)" counter
   during folder import, since duration-reading per track takes noticeable
   time on large collections and the UI currently appears frozen
+- Service worker update cycle: prompt client reload after `clients.claim()`
+  so a normal reload always delivers the latest version without requiring
+  Shift+Reload
 - Touch UI refinement based on real tablet usage
 - Performance check (especially decoupled pitch-shift CPU load on tablets)
 - Error handling / edge cases (corrupt files, unsupported formats, storage
@@ -169,8 +172,15 @@ support it (primarily Chromium-based).
 - Waveform display
 - Cue points / hot cues
 - MIDI controller support
-- Generate a favicon and embed it directly in `index.html` (e.g. inline
-  base64/SVG) rather than as a separate file
+- **Themes** — Dark (default) and Light at minimum, switchable in settings;
+  CSS Custom Properties are already used throughout so this is mostly
+  a second `:root` block + a toggle. Architecture note: no structural
+  JS changes needed, only CSS + a persisted setting.
+- **Favicon** — inline SVG or base64 in `index.html` (no separate file),
+  recognisable in browser tabs; should match the current theme accent
+  colour (amber disc motif already exists as icon-192/512).
+  The existing PWA icons (icon-192.png, icon-512.png) can serve as
+  the basis.
 
 ---
 
