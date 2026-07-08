@@ -30,6 +30,7 @@ const STRINGS = {
     'library.noResults': 'No tracks match your search.',
     'library.importSkippedDuplicates': 'Skipped {count} duplicate(s) already in the library.',
 
+    'playlist.title': 'Playlist',
     'playlist.loadOnA': 'A',
     'playlist.loadOnB': 'B',
     'playlist.loadOnA.title': 'Load on Deck A',
@@ -42,6 +43,8 @@ const STRINGS = {
     'playlist.clear': 'Clear playlist',
     'playlist.clearConfirm': 'Remove all tracks from the playlist? This cannot be undone.',
 
+    'deck.a': 'Deck A',
+    'deck.b': 'Deck B',
     'deck.play': 'Play',
     'deck.pause': 'Pause',
     'deck.stop': 'Stop',
@@ -49,6 +52,11 @@ const STRINGS = {
     'deck.loop': 'Loop',
     'deck.noTrack': 'No track loaded',
     'deck.volume': 'Volume',
+
+    'crossfader.label': 'Crossfader',
+    'crossfader.toA': '← A',
+    'crossfader.toB': 'B →',
+    'crossfader.center': 'Center',
 
     'about.title': 'About',
     'about.version': 'Version',
