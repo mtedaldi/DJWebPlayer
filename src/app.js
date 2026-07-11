@@ -277,50 +277,49 @@ el.fadeDurationSlider.addEventListener('input', async (e) => {
  * @param {string} fromId  'a' | 'b'  — deck currently playing
  * @param {string} toId    'a' | 'b'  — deck to fade into
  */
-function performCrossfade(fromId, toId) {
+function performCrossfade(fromId, toId, onComplete) {
   if (!audioCtx || !deckA || !deckB) return;
 
   const fromDeck = getDeck(fromId);
   const toDeck   = getDeck(toId);
   const now      = audioCtx.currentTime;
-  const end      = now + fadeDuration;
 
   // Special case: zero fade = instant cut
   if (fadeDuration === 0) {
     fromDeck.gainNode.gain.setValueAtTime(0, now);
     toDeck.gainNode.gain.setValueAtTime(1, now);
     el.crossfader.value = toId === 'b' ? '1' : '0';
+    if (onComplete) onComplete();
     return;
   }
 
-  // Read current crossfader position to determine start gains
   const xfCurrent = parseFloat(el.crossfader.value);
   const targetXf  = toId === 'b' ? 1.0 : 0.0;
 
-  // Schedule gain ramps on the audio graph
+  // Schedule gain ramps via equal-power steps
   fromDeck.gainNode.gain.cancelScheduledValues(now);
   toDeck.gainNode.gain.cancelScheduledValues(now);
 
-  // Equal-power ramp: interpolate crossfader value and derive gains
-  // We do this by scheduling many small steps (Web Audio linearRamp
-  // on the raw gain approximates equal-power well enough over ~10s)
   const steps = 60;
   for (let i = 0; i <= steps; i++) {
-    const t   = now + (fadeDuration * i / steps);
-    const xf  = xfCurrent + (targetXf - xfCurrent) * (i / steps);
+    const t     = now + (fadeDuration * i / steps);
+    const xf    = xfCurrent + (targetXf - xfCurrent) * (i / steps);
     const angle = xf * Math.PI / 2;
     fromDeck.gainNode.gain.setValueAtTime(toId === 'b' ? Math.cos(angle) : Math.sin(angle), t);
     toDeck.gainNode.gain.setValueAtTime(toId === 'b' ? Math.sin(angle) : Math.cos(angle), t);
   }
 
-  // Mirror crossfader UI in real time
+  // Mirror crossfader UI and call onComplete when done
   const startTime = performance.now();
   function animateSlider() {
     const elapsed  = (performance.now() - startTime) / 1000;
     const progress = Math.min(elapsed / fadeDuration, 1);
-    const xf = xfCurrent + (targetXf - xfCurrent) * progress;
-    el.crossfader.value = String(xf);
-    if (progress < 1) requestAnimationFrame(animateSlider);
+    el.crossfader.value = String(xfCurrent + (targetXf - xfCurrent) * progress);
+    if (progress < 1) {
+      requestAnimationFrame(animateSlider);
+    } else {
+      if (onComplete) onComplete();
+    }
   }
   requestAnimationFrame(animateSlider);
 }
@@ -328,41 +327,55 @@ function performCrossfade(fromId, toId) {
 /**
  * Called on every onTimeUpdate tick. Checks whether we should trigger
  * the auto-crossfade for the given deck.
+ *
+ * Only triggers if this deck is "dominant" (crossfader position gives it
+ * gain > 0.5). The free deck starts silently (gain 0), the fade brings
+ * it up while fading out the dominant deck. After the fade, the old deck
+ * stops automatically.
  */
 async function checkAutoFadeTrigger(deckId) {
   if (!autoFadeEnabled) return;
   const deck = getDeck(deckId);
   if (!deck.isPlaying || !deck.duration) return;
 
-  const remaining = deck.duration - deck.currentTime;
-  const threshold = Math.max(fadeDuration, 1); // never trigger before fade would finish
+  // Only the dominant deck (higher gain = crossfader pointing at it) triggers
+  const xf = parseFloat(el.crossfader.value);
+  const isDominant = deckId === 'a' ? xf <= 0.5 : xf > 0.5;
+  if (!isDominant) return;
 
+  const remaining = deck.duration - deck.currentTime;
+  const threshold = Math.max(fadeDuration, 1);
   if (remaining > threshold) return;
   if (_fadeTriggered[deckId]) return;
   _fadeTriggered[deckId] = true;
 
-  const otherId  = deckId === 'a' ? 'b' : 'a';
+  const otherId   = deckId === 'a' ? 'b' : 'a';
   const otherDeck = getDeck(otherId);
 
-  // Find next playlist track
-  const nextId = playlist.items[playlist.currentIndex + 1] ?? null;
-  if (!nextId && !loopEnabled) return;
-
-  const trackToLoad = nextId ??
-    (loopEnabled ? playlist.items[0] : null);
+  // Determine next track
+  const nextIndex = playlist.currentIndex + 1;
+  const trackToLoad = nextIndex < playlist.items.length
+    ? playlist.items[nextIndex]
+    : (loopEnabled ? playlist.items[0] : null);
   if (!trackToLoad) return;
 
-  // Load next track onto the free deck if not already there
+  // Load next track onto free deck if not already there
   if (otherDeck.currentTrackId !== trackToLoad) {
     await loadTrackOnDeck(otherId, trackToLoad);
   }
 
-  // Start the free deck and crossfade into it
+  // Start free deck silently (gain = 0), then crossfade
+  otherDeck.gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
   otherDeck.play();
-  performCrossfade(deckId, otherId);
+
+  // Crossfade, then stop the old deck after fade completes
+  performCrossfade(deckId, otherId, () => {
+    deck.stop();
+    updateDeckUI(deckId);
+  });
 
   // Advance playlist index
-  if (nextId) {
+  if (nextIndex < playlist.items.length) {
     playlist.advance();
   } else if (loopEnabled) {
     playlist.setCurrentIndex(0);
