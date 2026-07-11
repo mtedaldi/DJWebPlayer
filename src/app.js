@@ -9,7 +9,7 @@ import { Playlist } from './playlist.js';
 
 // ---- Constants ----
 
-const APP_VERSION = '0.2.0';
+const APP_VERSION = '0.3.0';
 
 // ---- Audio context + decks ----
 // AudioContext is created lazily on first user gesture to comply with
@@ -27,14 +27,14 @@ function ensureAudioContext() {
   masterGain.connect(audioCtx.destination);
 
   deckA = new Deck(audioCtx, {
-    onEnded:     () => handleTrackEnded('a'),
-    onTimeUpdate: () => updateDeckUI('a'),
-    onLoaded:    () => updateDeckUI('a'),
+    onEnded:      () => handleTrackEnded('a'),
+    onTimeUpdate: () => { updateDeckUI('a'); checkAutoFadeTrigger('a'); },
+    onLoaded:     () => updateDeckUI('a'),
   });
   deckB = new Deck(audioCtx, {
-    onEnded:     () => handleTrackEnded('b'),
-    onTimeUpdate: () => updateDeckUI('b'),
-    onLoaded:    () => updateDeckUI('b'),
+    onEnded:      () => handleTrackEnded('b'),
+    onTimeUpdate: () => { updateDeckUI('b'); checkAutoFadeTrigger('b'); },
+    onLoaded:     () => updateDeckUI('b'),
   });
 
   deckA.gainNode.connect(masterGain);
@@ -52,7 +52,10 @@ let librarySearchTerm = '';
 let librarySortKey    = 'addedAt';
 let librarySortAsc    = true;
 const selectedLibraryIds = new Set();
-let loopEnabled = false;
+let loopEnabled    = false;
+let autoFadeEnabled = false;
+let fadeDuration   = 10;    // seconds
+let _fadeTriggered = {};    // { 'a': bool, 'b': bool } — prevent double-trigger per track
 
 // Which deck is "free" (not currently playing)?
 // Used by double-click to load onto the non-playing deck.
@@ -117,6 +120,10 @@ const el = {
   xfLabelB:      document.getElementById('xf-label-b'),
   xfCenterBtn:   document.getElementById('xf-center-btn'),
   loopBtn:       document.getElementById('loop-btn'),
+  autoFadeBtn:   document.getElementById('auto-fade-btn'),
+  fadeDurationSlider: document.getElementById('fade-duration'),
+  fadeDurationValue:  document.getElementById('fade-duration-value'),
+  fadeDurationLabel:  document.getElementById('fade-duration-label'),
 
   // Playlist
   playlistTitle:  document.getElementById('playlist-title'),
@@ -243,6 +250,126 @@ el.loopBtn.addEventListener('click', async () => {
   updateLoopButton();
   await setSetting('loop', loopEnabled);
 });
+
+// ---- Auto-Crossfade ----
+
+function updateAutoFadeButton() {
+  el.autoFadeBtn.classList.toggle('is-active', autoFadeEnabled);
+}
+
+el.autoFadeBtn.addEventListener('click', async () => {
+  autoFadeEnabled = !autoFadeEnabled;
+  updateAutoFadeButton();
+  await setSetting('autoFade', autoFadeEnabled);
+});
+
+el.fadeDurationSlider.addEventListener('input', async (e) => {
+  fadeDuration = parseFloat(e.target.value);
+  el.fadeDurationValue.textContent = `${fadeDuration}s`;
+  await setSetting('fadeDuration', fadeDuration);
+});
+
+/**
+ * Perform a smooth crossfade from one deck to another over fadeDuration
+ * seconds using Web Audio API gain ramps (frame-accurate, no setInterval).
+ * The UI slider is updated via requestAnimationFrame.
+ *
+ * @param {string} fromId  'a' | 'b'  — deck currently playing
+ * @param {string} toId    'a' | 'b'  — deck to fade into
+ */
+function performCrossfade(fromId, toId) {
+  if (!audioCtx || !deckA || !deckB) return;
+
+  const fromDeck = getDeck(fromId);
+  const toDeck   = getDeck(toId);
+  const now      = audioCtx.currentTime;
+  const end      = now + fadeDuration;
+
+  // Special case: zero fade = instant cut
+  if (fadeDuration === 0) {
+    fromDeck.gainNode.gain.setValueAtTime(0, now);
+    toDeck.gainNode.gain.setValueAtTime(1, now);
+    el.crossfader.value = toId === 'b' ? '1' : '0';
+    return;
+  }
+
+  // Read current crossfader position to determine start gains
+  const xfCurrent = parseFloat(el.crossfader.value);
+  const targetXf  = toId === 'b' ? 1.0 : 0.0;
+
+  // Schedule gain ramps on the audio graph
+  fromDeck.gainNode.gain.cancelScheduledValues(now);
+  toDeck.gainNode.gain.cancelScheduledValues(now);
+
+  // Equal-power ramp: interpolate crossfader value and derive gains
+  // We do this by scheduling many small steps (Web Audio linearRamp
+  // on the raw gain approximates equal-power well enough over ~10s)
+  const steps = 60;
+  for (let i = 0; i <= steps; i++) {
+    const t   = now + (fadeDuration * i / steps);
+    const xf  = xfCurrent + (targetXf - xfCurrent) * (i / steps);
+    const angle = xf * Math.PI / 2;
+    fromDeck.gainNode.gain.setValueAtTime(toId === 'b' ? Math.cos(angle) : Math.sin(angle), t);
+    toDeck.gainNode.gain.setValueAtTime(toId === 'b' ? Math.sin(angle) : Math.cos(angle), t);
+  }
+
+  // Mirror crossfader UI in real time
+  const startTime = performance.now();
+  function animateSlider() {
+    const elapsed  = (performance.now() - startTime) / 1000;
+    const progress = Math.min(elapsed / fadeDuration, 1);
+    const xf = xfCurrent + (targetXf - xfCurrent) * progress;
+    el.crossfader.value = String(xf);
+    if (progress < 1) requestAnimationFrame(animateSlider);
+  }
+  requestAnimationFrame(animateSlider);
+}
+
+/**
+ * Called on every onTimeUpdate tick. Checks whether we should trigger
+ * the auto-crossfade for the given deck.
+ */
+async function checkAutoFadeTrigger(deckId) {
+  if (!autoFadeEnabled) return;
+  const deck = getDeck(deckId);
+  if (!deck.isPlaying || !deck.duration) return;
+
+  const remaining = deck.duration - deck.currentTime;
+  const threshold = Math.max(fadeDuration, 1); // never trigger before fade would finish
+
+  if (remaining > threshold) return;
+  if (_fadeTriggered[deckId]) return;
+  _fadeTriggered[deckId] = true;
+
+  const otherId  = deckId === 'a' ? 'b' : 'a';
+  const otherDeck = getDeck(otherId);
+
+  // Find next playlist track
+  const nextId = playlist.items[playlist.currentIndex + 1] ?? null;
+  if (!nextId && !loopEnabled) return;
+
+  const trackToLoad = nextId ??
+    (loopEnabled ? playlist.items[0] : null);
+  if (!trackToLoad) return;
+
+  // Load next track onto the free deck if not already there
+  if (otherDeck.currentTrackId !== trackToLoad) {
+    await loadTrackOnDeck(otherId, trackToLoad);
+  }
+
+  // Start the free deck and crossfade into it
+  otherDeck.play();
+  performCrossfade(deckId, otherId);
+
+  // Advance playlist index
+  if (nextId) {
+    playlist.advance();
+  } else if (loopEnabled) {
+    playlist.setCurrentIndex(0);
+  }
+  await savePlaylistState();
+  renderPlaylist(false);
+}
 
 // ---- Library ----
 
@@ -558,6 +685,7 @@ async function loadTrackOnDeck(deckId, trackId) {
   if (!blob) return;
   const meta = findTrackMeta(trackId);
   await getDeck(deckId).load(trackId, blob, meta ? displayName(meta) : '');
+  _fadeTriggered[deckId] = false; // reset for new track
   updateDeckUI(deckId);
   renderPlaylist(false);
 }
@@ -697,7 +825,9 @@ function applyStaticStrings() {
   el.deckBSkip.textContent = t('deck.skip');
 
   el.loopBtn.textContent     = `🔁 ${t('deck.loop')}`;
+  el.autoFadeBtn.textContent = `⇌ ${t('crossfader.autoFade')}`;
   el.xfCenterBtn.textContent = t('crossfader.center');
+  el.fadeDurationLabel.textContent = t('crossfader.fadeDuration');
   el.xfLabelA.textContent    = t('crossfader.toA');
   el.xfLabelCenter.textContent = t('crossfader.label');
   el.xfLabelB.textContent    = t('crossfader.toB');
@@ -716,6 +846,16 @@ applyStaticStrings();
 
   const savedLoop = await getSetting('loop');
   if (savedLoop === true) { loopEnabled = true; updateLoopButton(); }
+
+  const savedAutoFade = await getSetting('autoFade');
+  if (savedAutoFade === true) { autoFadeEnabled = true; updateAutoFadeButton(); }
+
+  const savedFadeDuration = await getSetting('fadeDuration');
+  if (savedFadeDuration !== null) {
+    fadeDuration = savedFadeDuration;
+    el.fadeDurationSlider.value = String(fadeDuration);
+    el.fadeDurationValue.textContent = `${fadeDuration}s`;
+  }
 
   await loadPlaylistState();
   renderPlaylist(false);

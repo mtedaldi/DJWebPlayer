@@ -60,7 +60,7 @@
     <header class="app-header">
       <button id="burger-btn" class="burger-btn" aria-label="Open library">☰</button>
       <h1>DJWebPlayer</h1>
-      <button id="info-btn" class="info-btn" aria-label="About">ℹ v0.2.0</button>
+      <button id="info-btn" class="info-btn" aria-label="About">ℹ v0.3.0</button>
     </header>
 
     <main class="app-main">
@@ -121,7 +121,13 @@
                value="0.5" class="crossfader-slider">
         <div class="crossfader-controls">
           <button id="loop-btn" class="btn-toggle"></button>
+          <button id="auto-fade-btn" class="btn-toggle"></button>
           <button id="xf-center-btn" class="btn-small"></button>
+          <div class="fade-duration-row">
+            <span id="fade-duration-label"></span>
+            <input id="fade-duration" type="range" min="0" max="15" step="0.5" value="10">
+            <span id="fade-duration-value">10s</span>
+          </div>
         </div>
       </section>
 

@@ -57,6 +57,9 @@ const STRINGS = {
     'crossfader.toA': '← A',
     'crossfader.toB': 'B →',
     'crossfader.center': 'Center',
+    'crossfader.auto': 'Auto',
+    'crossfader.autoFade': 'Auto-fade',
+    'crossfader.fadeDuration': 'Fade',
 
     'about.title': 'About',
     'about.version': 'Version',

@@ -128,7 +128,23 @@ button:focus-visible, [tabindex]:focus-visible, input:focus-visible {
 }
 .crossfader-labels { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--color-text-dim); }
 .crossfader-slider { width: 100%; accent-color: var(--color-accent); height: 24px; cursor: pointer; }
-.crossfader-controls { display: flex; gap: 0.5rem; align-items: center; }
+.crossfader-controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+
+.fade-duration-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+}
+.fade-duration-row input[type="range"] { width: 80px; }
+#fade-duration-value {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+  min-width: 2.5rem;
+}
 
 button.btn-toggle {
   min-height: 36px; padding: 0 1rem; border-radius: 999px;

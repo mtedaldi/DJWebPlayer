@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- v0.3.0: Automatic crossfade for playlist mode —
+  - Auto-crossfade toggle button (⇌) next to Loop button
+  - Configurable fade duration: 0–15s slider, default 10s, persisted
+  - Triggers at (duration − fadeDuration) seconds before track end
+  - Next track is loaded silently onto the free deck, started, then
+    crossfaded in via equal-power gain ramps on the Web Audio graph
+    (frame-accurate, no setInterval); UI slider mirrors in real time
+    via requestAnimationFrame
+  - Zero fade duration = instant hard cut
+  - Auto-fade and fade duration persist across reloads (IndexedDB)
+  - Service worker cache bumped to v6
+
+### Added
 - v0.2.0: Two independent decks (Deck A amber, Deck B blue) —
   - Web Audio API replaces HTMLAudioElement; shared AudioContext with
     per-deck GainNode for precise volume control
