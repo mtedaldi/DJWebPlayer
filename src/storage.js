@@ -71,23 +71,24 @@ function readDuration(blob) {
 }
 
 /**
- * Check whether a track matching this filename + size already exists.
+ * Check whether a track matching this filename + size already exists
+ * in the given list of existing tracks.
  * Fast heuristic per FR-1.9 — not a content hash.
+ * The caller passes the already-loaded track list to avoid one DB read
+ * per file during bulk imports.
  */
-async function findDuplicate(file) {
-  const existing = await listTracks();
-  return existing.find((t) => t.name === file.name && t.size === file.size) || null;
+function findDuplicate(existingTracks, file) {
+  return existingTracks.find((t) => t.name === file.name && t.size === file.size) || null;
 }
 
 /**
  * Store a File object as a track, unless a duplicate (by name + size)
- * already exists, in which case it's silently skipped.
+ * already exists in existingTracks (pre-loaded by caller for performance).
  *
- * Returns { track, skipped } where track is the stored metadata (or the
- * existing duplicate's metadata if skipped).
+ * Returns { track, skipped }.
  */
-async function addTrack(file) {
-  const duplicate = await findDuplicate(file);
+async function addTrack(file, existingTracks) {
+  const duplicate = findDuplicate(existingTracks, file);
   if (duplicate) {
     return { track: duplicate, skipped: true };
   }
@@ -145,16 +146,6 @@ async function getTrackBlob(id) {
     const request = tx.objectStore(STORE_TRACKS).get(id);
     request.onsuccess = () => resolve(request.result ? request.result.blob : null);
     request.onerror = (event) => reject(event.target.error);
-  });
-}
-
-async function deleteTrack(id) {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_TRACKS, 'readwrite');
-    tx.objectStore(STORE_TRACKS).delete(id);
-    tx.oncomplete = resolve;
-    tx.onerror = (event) => reject(event.target.error);
   });
 }
 
@@ -238,7 +229,6 @@ export {
   addTrack,
   listTracks,
   getTrackBlob,
-  deleteTrack,
   deleteTracks,
   clearLibrary,
   resetDatabase,

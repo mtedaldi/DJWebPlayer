@@ -2,13 +2,13 @@
  * playlist.js — in-memory playlist ordering and navigation.
  *
  * Holds an ordered list of track ids (referencing tracks in storage.js).
- * Persistence of the playlist itself across reloads is not in scope for
- * v0.1 — only the imported library persists. See roadmap.md.
+ * Playlist state is persisted to IndexedDB via storage.getSetting/setSetting
+ * (implemented in app.js since v0.1.3).
  */
 
 class Playlist {
   constructor() {
-    this.items = []; // array of track ids
+    this.items        = []; // array of track ids
     this.currentIndex = -1;
   }
 
@@ -17,43 +17,40 @@ class Playlist {
   }
 
   clear() {
-    this.items = [];
+    this.items        = [];
     this.currentIndex = -1;
   }
 
   removeAt(index) {
     if (index < 0 || index >= this.items.length) return;
     this.items.splice(index, 1);
-    if (this.currentIndex > index) {
-      this.currentIndex -= 1;
-    } else if (this.currentIndex === index) {
-      this.currentIndex = -1;
-    }
+    if (this.currentIndex > index)       this.currentIndex -= 1;
+    else if (this.currentIndex === index) this.currentIndex = -1;
   }
 
   /**
-   * Remove every playlist entry referencing one of the given track ids.
-   * Used when tracks are deleted from the library (FR-1.7/1.8) so the
-   * playlist doesn't keep dangling references.
+   * Remove every playlist entry whose track id is in the given set.
+   * Used when tracks are deleted from the library so the playlist
+   * doesn't keep dangling references.
    */
   removeByTrackIds(trackIds) {
-    const idSet = new Set(trackIds);
+    const idSet          = new Set(trackIds);
     const currentTrackId = this.currentTrackId;
-    this.items = this.items.filter((id) => !idSet.has(id));
-    this.currentIndex = currentTrackId ? this.items.indexOf(currentTrackId) : -1;
+    this.items           = this.items.filter((id) => !idSet.has(id));
+    this.currentIndex    = currentTrackId ? this.items.indexOf(currentTrackId) : -1;
   }
 
   moveUp(index) {
     if (index <= 0 || index >= this.items.length) return;
     this._swap(index, index - 1);
-    if (this.currentIndex === index) this.currentIndex -= 1;
+    if      (this.currentIndex === index)     this.currentIndex -= 1;
     else if (this.currentIndex === index - 1) this.currentIndex += 1;
   }
 
   moveDown(index) {
     if (index < 0 || index >= this.items.length - 1) return;
     this._swap(index, index + 1);
-    if (this.currentIndex === index) this.currentIndex += 1;
+    if      (this.currentIndex === index)     this.currentIndex += 1;
     else if (this.currentIndex === index + 1) this.currentIndex -= 1;
   }
 
@@ -62,9 +59,7 @@ class Playlist {
   }
 
   get currentTrackId() {
-    if (this.currentIndex < 0 || this.currentIndex >= this.items.length) {
-      return null;
-    }
+    if (this.currentIndex < 0 || this.currentIndex >= this.items.length) return null;
     return this.items[this.currentIndex];
   }
 
@@ -80,13 +75,14 @@ class Playlist {
     return null;
   }
 
-  /**
-   * Set the current index directly, e.g. when the user picks a track.
-   */
   setCurrentIndex(index) {
-    if (index >= 0 && index < this.items.length) {
-      this.currentIndex = index;
-    }
+    if (index >= 0 && index < this.items.length) this.currentIndex = index;
+  }
+
+  /** Peek at the next track id without advancing the index. */
+  peekNext() {
+    const next = this.currentIndex + 1;
+    return next < this.items.length ? this.items[next] : null;
   }
 }
 

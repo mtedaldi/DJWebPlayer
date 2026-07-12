@@ -4,7 +4,7 @@ import {
   deleteTracks, clearLibrary, resetDatabase,
   getSetting, setSetting,
 } from './storage.js';
-import { Deck } from './deck.js';
+import { Deck, DeckState } from './deck.js';
 import { Playlist } from './playlist.js';
 
 // ---- Constants ----
@@ -28,12 +28,12 @@ function ensureAudioContext() {
 
   deckA = new Deck(audioCtx, {
     onEnded:      () => handleTrackEnded('a'),
-    onTimeUpdate: () => { updateDeckUI('a'); checkAutoFadeTrigger('a'); },
+    onTimeUpdate: () => { updateDeckUI('a'); checkAutoFadeTrigger('a').catch(console.error); },
     onLoaded:     () => updateDeckUI('a'),
   });
   deckB = new Deck(audioCtx, {
     onEnded:      () => handleTrackEnded('b'),
-    onTimeUpdate: () => { updateDeckUI('b'); checkAutoFadeTrigger('b'); },
+    onTimeUpdate: () => { updateDeckUI('b'); checkAutoFadeTrigger('b').catch(console.error); },
     onLoaded:     () => updateDeckUI('b'),
   });
 
@@ -55,7 +55,29 @@ const selectedLibraryIds = new Set();
 let loopEnabled    = false;
 let autoFadeEnabled = false;
 let fadeDuration   = 10;    // seconds
-let _fadeTriggered = {};    // { 'a': bool, 'b': bool } — prevent double-trigger per track
+/**
+ * Per-deck fade state. Replaces the fragile _fadeTriggered/_fadeHandled
+ * boolean pair with a proper enum so invalid combinations are impossible.
+ *
+ *  idle       — no fade activity
+ *  triggered  — fade has been scheduled, deck is still playing
+ *  fading-out — this deck is the outgoing deck during an active fade
+ *  fading-in  — this deck is the incoming deck during an active fade
+ *  done       — fade finished; handleTrackEnded should skip the advance
+ */
+const FadeState = Object.freeze({
+  IDLE:        'idle',
+  TRIGGERED:   'triggered',
+  FADING_OUT:  'fading-out',
+  FADING_IN:   'fading-in',
+  DONE:        'done',
+});
+
+const deckFadeState = { a: FadeState.IDLE, b: FadeState.IDLE };
+
+function resetFadeState(deckId) {
+  deckFadeState[deckId] = FadeState.IDLE;
+}
 
 // Which deck is "free" (not currently playing)?
 // Used by double-click to load onto the non-playing deck.
@@ -126,7 +148,6 @@ const el = {
   fadeDurationLabel:  document.getElementById('fade-duration-label'),
 
   // Playlist
-  playlistTitle:  document.getElementById('playlist-title'),
   playlistClear:  document.getElementById('playlist-clear'),
   playlistEmpty:  document.getElementById('playlist-empty'),
   playlistList:   document.getElementById('playlist-list'),
@@ -160,8 +181,6 @@ function displayName(track) {
 }
 
 function getDeck(id) { return id === 'a' ? deckA : deckB; }
-
-function freeDeck() { return activeDeck === 'a' ? 'b' : 'a'; }
 
 // ---- Crossfader (equal-power) ----
 
@@ -338,48 +357,52 @@ async function checkAutoFadeTrigger(deckId) {
   const deck = getDeck(deckId);
   if (!deck.isPlaying || !deck.duration) return;
 
-  // Only the dominant deck (higher gain = crossfader pointing at it) triggers
+  // Only the dominant deck (crossfader pointing at it) drives auto-fade
   const xf = parseFloat(el.crossfader.value);
   const isDominant = deckId === 'a' ? xf <= 0.5 : xf > 0.5;
   if (!isDominant) return;
 
+  // Only trigger once per track
+  if (deckFadeState[deckId] !== FadeState.IDLE) return;
+
   const remaining = deck.duration - deck.currentTime;
-  const threshold = Math.max(fadeDuration, 1);
-  if (remaining > threshold) return;
-  if (_fadeTriggered[deckId]) return;
-  _fadeTriggered[deckId] = true;
+  if (remaining > Math.max(fadeDuration, 1)) return;
+
+  // Determine next track via peekNext() — no advance yet
+  const trackToLoad = playlist.peekNext() ??
+    (loopEnabled ? playlist.items[0] : null);
+  if (!trackToLoad) return;
+
+  deckFadeState[deckId] = FadeState.TRIGGERED;
 
   const otherId   = deckId === 'a' ? 'b' : 'a';
   const otherDeck = getDeck(otherId);
 
-  // Determine next track
-  const nextIndex = playlist.currentIndex + 1;
-  const trackToLoad = nextIndex < playlist.items.length
-    ? playlist.items[nextIndex]
-    : (loopEnabled ? playlist.items[0] : null);
-  if (!trackToLoad) return;
-
-  // Load next track onto free deck if not already there
   if (otherDeck.currentTrackId !== trackToLoad) {
     await loadTrackOnDeck(otherId, trackToLoad);
   }
 
-  // Start free deck silently (gain = 0), then crossfade
+  deckFadeState[deckId]   = FadeState.FADING_OUT;
+  deckFadeState[otherId]  = FadeState.FADING_IN;
+
+  // Start incoming deck silently
   otherDeck.gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
   otherDeck.play();
 
-  // Crossfade, then stop the old deck after fade completes
   performCrossfade(deckId, otherId, () => {
     deck.stop();
+    deckFadeState[deckId]  = FadeState.DONE;   // suppress handleTrackEnded advance
+    deckFadeState[otherId] = FadeState.IDLE;
     updateDeckUI(deckId);
   });
 
-  // Advance playlist index
-  if (nextIndex < playlist.items.length) {
+  // Now advance playlist — after fade is set up, not before
+  if (playlist.peekNext()) {
     playlist.advance();
   } else if (loopEnabled) {
     playlist.setCurrentIndex(0);
   }
+
   await savePlaylistState();
   renderPlaylist(false);
 }
@@ -484,10 +507,17 @@ function looksLikeAudio(file) {
 
 async function importFiles(fileList) {
   const files = Array.from(fileList).filter(looksLikeAudio);
+  if (files.length === 0) return;
+
+  // Load existing tracks once for duplicate detection (FR-1.9),
+  // instead of one DB read per file.
+  const existingTracks = await listTracks();
   let skipped = 0;
+
   for (const file of files) {
-    const { skipped: s } = await addTrack(file);
+    const { skipped: s } = await addTrack(file, existingTracks);
     if (s) skipped++;
+    else existingTracks.push({ name: file.name, size: file.size }); // keep list current
   }
   await refreshLibrary();
   if (skipped > 0) console.info(t('library.importSkippedDuplicates', { count: skipped }));
@@ -698,7 +728,7 @@ async function loadTrackOnDeck(deckId, trackId) {
   if (!blob) return;
   const meta = findTrackMeta(trackId);
   await getDeck(deckId).load(trackId, blob, meta ? displayName(meta) : '');
-  _fadeTriggered[deckId] = false; // reset for new track
+  resetFadeState(deckId);
   updateDeckUI(deckId);
   renderPlaylist(false);
 }
@@ -706,6 +736,14 @@ async function loadTrackOnDeck(deckId, trackId) {
 // ---- Track ended handler ----
 
 async function handleTrackEnded(deckId) {
+  // Auto-fade already stopped this deck and advanced the playlist.
+  // Just reset state and update UI — don't advance again.
+  if (deckFadeState[deckId] === FadeState.DONE) {
+    resetFadeState(deckId);
+    updateDeckUI(deckId);
+    return;
+  }
+
   const nextId = playlist.advance();
   if (nextId) {
     await loadTrackOnDeck(deckId, nextId);
