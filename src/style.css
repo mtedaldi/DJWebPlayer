@@ -97,6 +97,29 @@ button:focus-visible, [tabindex]:focus-visible, input:focus-visible {
   overflow: hidden; cursor: pointer;
 }
 .deck-progress-fill { position: absolute; inset: 0; width: 0%; transition: width 0.1s linear; }
+
+/* Fade trigger marker: vertical line + small triangle above */
+.deck-fade-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.deck-fade-marker::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+}
+.deck-a .deck-fade-marker { background: var(--color-accent); color: var(--color-accent); }
+.deck-b .deck-fade-marker { background: var(--color-deck-b); color: var(--color-deck-b); }
+.deck-fade-marker[hidden] { display: none; }
 .deck-a .deck-progress-fill { background: linear-gradient(90deg, var(--color-accent-dim), var(--color-accent)); }
 .deck-b .deck-progress-fill { background: linear-gradient(90deg, var(--color-deck-b-dim), var(--color-deck-b)); }
 

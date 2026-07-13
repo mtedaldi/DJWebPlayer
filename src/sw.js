@@ -4,13 +4,15 @@
  * live in IndexedDB (see storage.js), not in this cache.
  */
 
-const CACHE_NAME = 'djwebplayer-shell-v6';
+const CACHE_NAME = 'djwebplayer-shell-v7';
 
 const SHELL_FILES = [
   './',
   './index.html',
   './style.css',
   './app.js',
+  './audio.js',
+  './ui.js',
   './i18n.js',
   './storage.js',
   './deck.js',
