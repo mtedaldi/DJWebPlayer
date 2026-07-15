@@ -14,8 +14,8 @@ import {
 } from './storage.js';
 import { Playlist } from './playlist.js';
 import {
-  FadeState, deckFadeState, resetFadeState,
-  ensureAudioContext, getDeck, freeDeckId,
+  FadeState, deckFadeState, resetFadeState, isFadeActive,
+  ensureAudioContext, getDeck, otherDeckId,
   applyCrossfader, performCrossfade,
   audioCtx, deckA, deckB,
 } from './audio.js';
@@ -27,7 +27,7 @@ import {
 
 // ---- Constants ----
 
-const APP_VERSION = '0.3.0';
+const APP_VERSION = '0.3.1';
 
 // ---- State ----
 
@@ -160,8 +160,10 @@ initUI({
       refreshRenderLibrary();
     },
     onAddToPlaylist: (trackId) => {
+      const wasEmpty = playlist.items.length === 0;
       playlist.add(trackId);
       refreshRenderPlaylist();
+      if (wasEmpty || playlist.items.length === 2) initPlaylistDecks();
     },
     onLoadOnDeck: (deckId, trackId, index) => {
       _ensureAudio();
@@ -179,7 +181,9 @@ initUI({
     },
     onPlaylistDblClick: (trackId, index) => {
       _ensureAudio();
-      const target = freeDeckId();
+      const dA     = getDeck('a');
+      const dB     = getDeck('b');
+      const target = (dA && !dA.isPlaying) ? 'a' : 'b';
       playlist.setCurrentIndex(index);
       loadTrackOnDeck(target, trackId).then(() => refreshRenderPlaylist());
     },
@@ -260,12 +264,17 @@ async function loadTrackOnDeck(deckId, trackId) {
 
 // ---- Track ended ----
 
+// ---- Track ended ----
+
 async function handleTrackEnded(deckId) {
-  if (deckFadeState[deckId] === FadeState.DONE) {
-    resetFadeState(deckId);
+  // If a fade was active for this deck, it already handled everything
+  // in onComplete (advance, stop, post-load). Nothing to do here.
+  if (deckFadeState[deckId] !== FadeState.IDLE) {
     updateDeckUI(deckId);
     return;
   }
+
+  // Normal end (no fade): advance playlist and play next on same deck.
   const nextId = playlist.advance();
   if (nextId) {
     await loadTrackOnDeck(deckId, nextId);
@@ -287,48 +296,106 @@ async function checkAutoFadeTrigger(deckId) {
   const deck = getDeck(deckId);
   if (!deck || !deck.isPlaying || !deck.duration) return;
 
+  // Only the dominant deck (crossfader pointing at it) triggers.
   const xf         = parseFloat(el.crossfader.value);
   const isDominant = deckId === 'a' ? xf <= 0.5 : xf > 0.5;
   if (!isDominant) return;
+
+  // Only trigger once per track.
   if (deckFadeState[deckId] !== FadeState.IDLE) return;
 
   const remaining = deck.duration - deck.currentTime;
   if (remaining > Math.max(fadeDuration, 1)) return;
 
+  // Determine the next track (peek — no advance yet).
   const trackToLoad = playlist.peekNext() ??
     (loopEnabled ? playlist.items[0] : null);
   if (!trackToLoad) return;
 
-  deckFadeState[deckId] = FadeState.TRIGGERED;
-
-  const otherId   = deckId === 'a' ? 'b' : 'a';
+  // Mark both decks as fading.
+  const otherId   = otherDeckId(deckId);
   const otherDeck = getDeck(otherId);
+  deckFadeState[deckId]  = FadeState.FADING_OUT;
+  deckFadeState[otherId] = FadeState.FADING_IN;
 
+  // Load next track onto free deck only if not already there
+  // (e.g. post-loaded from the previous fade's onComplete).
   if (otherDeck.currentTrackId !== trackToLoad) {
     await loadTrackOnDeck(otherId, trackToLoad);
   }
 
-  deckFadeState[deckId]  = FadeState.FADING_OUT;
-  deckFadeState[otherId] = FadeState.FADING_IN;
-
+  // Start incoming deck silently.
   otherDeck.gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
   otherDeck.play();
 
   performCrossfade(deckId, otherId, fadeDuration, el.crossfader.value,
     (v) => { el.crossfader.value = v; },
-    () => {
-      deck.stop();
+    async () => {
+      // 1. Advance playlist — exactly once, exactly here.
+      if (playlist.peekNext()) {
+        playlist.advance();
+      } else if (loopEnabled) {
+        playlist.setCurrentIndex(0);
+      }
+
+      // 2. Stop outgoing deck and mark as DONE so handleTrackEnded
+      //    (which fires when the source node ends) does nothing.
       deckFadeState[deckId]  = FadeState.DONE;
       deckFadeState[otherId] = FadeState.IDLE;
+      deck.stop();
       updateDeckUI(deckId);
+
+      // 3. Post-load: silently load the *next* upcoming track onto the
+      //    now-free outgoing deck, ready for the next fade.
+      //    This happens once here — nowhere else.
+      const nextUp = playlist.peekNext() ??
+        (loopEnabled ? playlist.items[0] : null);
+      if (nextUp) {
+        await loadTrackOnDeck(deckId, nextUp);
+        // loadTrackOnDeck calls resetFadeState → IDLE, deck is ready.
+      } else {
+        resetFadeState(deckId);
+      }
+
+      await savePlaylistState();
+      refreshRenderPlaylist(false);
     }
   );
+}
 
-  if (playlist.peekNext()) playlist.advance();
-  else if (loopEnabled)    playlist.setCurrentIndex(0);
+// ---- Playlist deck initialisation ----
 
-  await savePlaylistState();
-  refreshRenderPlaylist(false);
+/**
+ * When the playlist first gets tracks (or on reload), ensure both decks
+ * are pre-loaded so auto-fade always has something to fade into.
+ *
+ * Deck A: playlist item at currentIndex (or 0)
+ * Deck B: next item (silently, no autoplay)
+ *
+ * Only runs if decks are empty — never overwrites a playing deck.
+ */
+async function initPlaylistDecks() {
+  if (!playlist.items.length) return;
+  _ensureAudio();
+
+  const dA = getDeck('a');
+  const dB = getDeck('b');
+
+  // Don't touch playing decks.
+  if (dA && dA.isPlaying) return;
+  if (dB && dB.isPlaying) return;
+
+  if (playlist.currentIndex < 0) playlist.setCurrentIndex(0);
+
+  const trackA = playlist.currentTrackId;
+  const trackB = playlist.peekNext();
+
+  if (trackA && dA && !dA.currentTrackId) {
+    await loadTrackOnDeck('a', trackA);
+  }
+  if (trackB && dB && !dB.currentTrackId) {
+    await loadTrackOnDeck('b', trackB);
+  }
 }
 
 // ---- Event listeners: crossfader ----
@@ -569,6 +636,9 @@ applyStaticStrings(APP_VERSION, el);
   }
 
   refreshRenderPlaylist(false);
+
+  // Pre-load first two tracks into decks if playlist was restored.
+  if (playlist.items.length > 0) await initPlaylistDecks();
 })();
 
 if ('serviceWorker' in navigator) {
