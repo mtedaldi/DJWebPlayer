@@ -109,4 +109,4 @@ function getLanguage() {
   return currentLang;
 }
 
-export { t, setLanguage, getLanguage };
+export { t };

@@ -139,4 +139,4 @@ class Deck {
   }
 }
 
-export { Deck, DeckState };
+export { Deck };

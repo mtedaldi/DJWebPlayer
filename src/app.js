@@ -14,13 +14,12 @@ import {
 } from './storage.js';
 import { Playlist } from './playlist.js';
 import {
-  FadeState, deckFadeState, resetFadeState, isFadeActive,
+  FadeState, deckFadeState, resetFadeState,
   ensureAudioContext, getDeck, otherDeckId,
-  applyCrossfader, performCrossfade,
-  audioCtx, deckA, deckB,
+  applyCrossfader, performCrossfade, getAudioCtx,
 } from './audio.js';
 import {
-  init as initUI, formatTime, displayName,
+  init as initUI, displayName,
   updateDeckUI, renderLibrary, renderPlaylist,
   openDrawer, closeDrawer, confirmAction, applyStaticStrings,
 } from './ui.js';
@@ -163,7 +162,10 @@ initUI({
       const wasEmpty = playlist.items.length === 0;
       playlist.add(trackId);
       refreshRenderPlaylist();
-      if (wasEmpty || playlist.items.length === 2) initPlaylistDecks();
+      // Pre-load both decks when the playlist gets its first track.
+      // Subsequent additions don't re-trigger to avoid overwriting
+      // a playing deck.
+      if (wasEmpty) initPlaylistDecks();
     },
     onLoadOnDeck: (deckId, trackId, index) => {
       _ensureAudio();
@@ -193,6 +195,8 @@ initUI({
 
 // ---- Audio init (lazy) ----
 
+let _audioInitDone = false;
+
 function _ensureAudio() {
   ensureAudioContext({
     onEndedA:      () => handleTrackEnded('a'),
@@ -202,12 +206,19 @@ function _ensureAudio() {
     onLoadedA:     () => updateDeckUI('a'),
     onLoadedB:     () => updateDeckUI('b'),
   });
-  applyCrossfader(parseFloat(el.crossfader.value));
+  // Apply crossfader gains only on first init, not on every call —
+  // subsequent calls would override scheduled gain ramps mid-fade.
+  if (!_audioInitDone) {
+    applyCrossfader(parseFloat(el.crossfader.value));
+    _audioInitDone = true;
+  }
 }
 
 // ---- Library ----
 
 async function refreshLibrary() {
+  // Mutate in place (don't reassign) — ui.js holds a reference to this
+  // same array and relies on it staying current without re-init.
   library.length = 0;
   (await listTracks()).forEach((tr) => library.push(tr));
   refreshRenderLibrary();
@@ -261,8 +272,6 @@ async function loadTrackOnDeck(deckId, trackId) {
   updateDeckUI(deckId);
   refreshRenderPlaylist(false);
 }
-
-// ---- Track ended ----
 
 // ---- Track ended ----
 
@@ -326,7 +335,7 @@ async function checkAutoFadeTrigger(deckId) {
   }
 
   // Start incoming deck silently.
-  otherDeck.gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+  otherDeck.gainNode.gain.setValueAtTime(0, getAudioCtx().currentTime);
   otherDeck.play();
 
   performCrossfade(deckId, otherId, fadeDuration, el.crossfader.value,
@@ -614,28 +623,21 @@ applyStaticStrings(APP_VERSION, el);
 (async () => {
   await refreshLibrary();
 
-  const [savedLoop, savedAutoFade, savedFadeDuration, savedPlaylist] = await Promise.all([
+  const [savedLoop, savedAutoFade, savedFadeDuration] = await Promise.all([
     getSetting('loop'),
     getSetting('autoFade'),
     getSetting('fadeDuration'),
-    getSetting('playlist'),
   ]);
 
-  if (savedLoop       === true)   { loopEnabled = true;          updateLoopButton(); }
-  if (savedAutoFade   === true)   { autoFadeEnabled = true;       updateAutoFadeButton(); }
+  if (savedLoop         === true) { loopEnabled = true;     updateLoopButton(); }
+  if (savedAutoFade     === true) { autoFadeEnabled = true; updateAutoFadeButton(); }
   if (savedFadeDuration !== null) {
     fadeDuration = savedFadeDuration;
     el.fadeDurationSlider.value      = String(fadeDuration);
     el.fadeDurationValue.textContent = `${fadeDuration}s`;
   }
 
-  if (savedPlaylist) {
-    const ids = new Set(library.map((tr) => tr.id));
-    playlist.items        = (savedPlaylist.items || []).filter((id) => ids.has(id));
-    const idx             = savedPlaylist.currentIndex ?? -1;
-    playlist.currentIndex = idx < playlist.items.length ? idx : -1;
-  }
-
+  await loadPlaylistState();
   refreshRenderPlaylist(false);
 
   // Pre-load first two tracks into decks if playlist was restored.
