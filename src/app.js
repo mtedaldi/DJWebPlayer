@@ -318,9 +318,10 @@ async function checkAutoFadeTrigger(deckId) {
   deckFadeState[deckId]  = FadeState.FADING_OUT;
   deckFadeState[otherId] = FadeState.FADING_IN;
 
-  // Load next track onto free deck only if not already there
-  // (e.g. post-loaded from the previous fade's onComplete).
-  if (otherDeck.currentTrackId !== trackToLoad) {
+  // Load next track onto free deck only if it has nothing loaded yet.
+  // If the user manually loaded a track there, respect that choice
+  // and fade into whatever is on the deck.
+  if (!otherDeck.currentTrackId) {
     await loadTrackOnDeck(otherId, trackToLoad);
   }
 
