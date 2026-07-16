@@ -11,20 +11,25 @@ server required.
 
 ## Status
 
-🚧 Active development — v0.2.0 is the current release (two independent
-decks with crossfader, playlist with A/B load buttons). See
+Active development — **v0.3.1** is the current release. See
 [Roadmap](docs/roadmap.md) for what's next.
 
 ## Features (current)
 
 - Local music playback (your own files, nothing leaves the device)
-- Library with search, sort, multi-select, persistent across reloads
+- Library with search, sort by name/date/duration, multi-select,
+  duplicate detection, persists across reloads
 - Playlist with persistent state, loop mode
 - **Two independent decks** (Deck A amber, Deck B blue)
 - **Equal-power crossfader** with center-snap button
 - Per-deck Play/Pause, Stop, Skip, Volume
 - Explicit A/B load buttons per playlist row; double-click loads onto
   free deck
+- **Automatic crossfade** with configurable duration (0–15s), toggle on/off
+- Visual fade-trigger marker on progress bar
+- Post-fade pre-load: next track silently loaded onto free deck after
+  each fade, ready for next transition
+- Both decks pre-loaded on playlist init
 - Fully offline after first load, installable as PWA
 
 ## Features (planned, see roadmap for version breakdown)
@@ -65,6 +70,17 @@ Primary target: Chromium-based browsers (Chrome, Edge) on tablets and
 desktop. Some features (e.g. monitor output via `setSinkId()`) depend on
 browser API support and degrade gracefully where unavailable. See the
 architecture doc (once available) for details.
+
+## Privacy
+
+DJWebPlayer is designed to be privacy-respecting by construction:
+
+- All data stays on your device — nothing is sent to any server
+- Local storage (IndexedDB) holds: imported music files, playlist order,
+  and app settings (loop mode, fade duration, volume)
+- No analytics, no tracking, no external requests during normal operation
+- The only network activity is the initial load of the app shell (cached
+  offline thereafter by the service worker)
 
 ## Development
 

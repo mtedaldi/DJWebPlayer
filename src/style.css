@@ -360,6 +360,8 @@ button.is-danger { background: transparent; border: 1px solid var(--color-danger
 .about-box p  { margin: 0.25rem 0; font-size: 0.9rem; color: var(--color-text-dim); }
 .about-box a  { color: var(--color-accent); text-decoration: none; }
 .about-box a:hover { text-decoration: underline; }
+.about-divider { border: none; border-top: 1px solid var(--color-border); margin: 0.75rem 0; }
+.about-privacy, .about-storage { font-size: 0.75rem !important; opacity: 0.7; }
 .about-box .confirm-actions { margin-top: 1rem; }
 .about-box .confirm-actions button.is-primary {
   background: var(--color-accent); color: #1a1300; border-color: var(--color-accent);

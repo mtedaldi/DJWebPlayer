@@ -64,6 +64,8 @@ const STRINGS = {
     'about.title': 'About',
     'about.version': 'Version',
     'about.repo': 'Source code on GitHub',
+    'about.privacy': 'Privacy: all data stays on this device. Nothing is sent to any server.',
+    'about.storage': 'Local storage: imported music, playlist, and settings (IndexedDB).',
     'about.close': 'Close',
 
     'danger.title': 'Danger zone',

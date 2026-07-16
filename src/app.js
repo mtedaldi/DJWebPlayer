@@ -321,15 +321,14 @@ async function checkAutoFadeTrigger(deckId) {
     (loopEnabled ? playlist.items[0] : null);
   if (!trackToLoad) return;
 
-  // Mark both decks as fading.
   const otherId   = otherDeckId(deckId);
   const otherDeck = getDeck(otherId);
   deckFadeState[deckId]  = FadeState.FADING_OUT;
   deckFadeState[otherId] = FadeState.FADING_IN;
 
-  // Load next track onto free deck only if it has nothing loaded yet.
-  // If the user manually loaded a track there, respect that choice
-  // and fade into whatever is on the deck.
+  // The free deck should already have the next track loaded (post-loaded
+  // from the previous fade's onComplete, or by initPlaylistDecks on
+  // startup). If for any reason it doesn't, load it now.
   if (!otherDeck.currentTrackId) {
     await loadTrackOnDeck(otherId, trackToLoad);
   }
