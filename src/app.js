@@ -26,7 +26,7 @@ import {
 
 // ---- Constants ----
 
-const APP_VERSION = '0.3.1';
+const APP_VERSION = '0.4.0';
 
 // ---- State ----
 
@@ -73,6 +73,10 @@ const el = {
   deckAStop:     document.getElementById('deck-a-stop'),
   deckASkip:     document.getElementById('deck-a-skip'),
   deckAVolume:   document.getElementById('deck-a-volume'),
+  deckARate:     document.getElementById('deck-a-rate'),
+  deckARateVal:  document.getElementById('deck-a-rate-value'),
+  deckARateReset: document.getElementById('deck-a-rate-reset'),
+  deckARateLabel: document.getElementById('deck-a-rate-label'),
 
   deckBLabel:    document.getElementById('deck-b-label'),
   deckBTrack:    document.getElementById('deck-b-track'),
@@ -85,6 +89,10 @@ const el = {
   deckBStop:     document.getElementById('deck-b-stop'),
   deckBSkip:     document.getElementById('deck-b-skip'),
   deckBVolume:   document.getElementById('deck-b-volume'),
+  deckBRate:     document.getElementById('deck-b-rate'),
+  deckBRateVal:  document.getElementById('deck-b-rate-value'),
+  deckBRateReset: document.getElementById('deck-b-rate-reset'),
+  deckBRateLabel: document.getElementById('deck-b-rate-label'),
 
   crossfader:         document.getElementById('crossfader'),
   xfLabelA:           document.getElementById('xf-label-a'),
@@ -268,6 +276,8 @@ async function loadTrackOnDeck(deckId, trackId) {
   if (!blob) return;
   const meta = library.find((tr) => tr.id === trackId);
   await getDeck(deckId).load(trackId, blob, meta ? displayName(meta) : '');
+  // deck.load() resets _rate to 1.0; sync the UI slider too
+  applyRate(deckId, 1.0);
   resetFadeState(deckId);
   updateDeckUI(deckId);
   refreshRenderPlaylist(false);
@@ -537,6 +547,20 @@ el.playlistClear.addEventListener('click', async () => {
   refreshRenderPlaylist();
 });
 
+function formatRate(value) {
+  const pct = Math.round((value - 1.0) * 100);
+  return pct === 0 ? '0%' : (pct > 0 ? `+${pct}%` : `${pct}%`);
+}
+
+function applyRate(deckId, value) {
+  const deck      = getDeck(deckId);
+  const rateSlider = deckId === 'a' ? el.deckARate    : el.deckBRate;
+  const rateVal    = deckId === 'a' ? el.deckARateVal : el.deckBRateVal;
+  if (deck) deck.setRate(value);
+  rateSlider.value      = String(value);
+  rateVal.textContent   = formatRate(value);
+}
+
 // ---- Event listeners: deck controls ----
 
 function wireDeckControls(id) {
@@ -576,6 +600,18 @@ function wireDeckControls(id) {
       if (wasPlaying) getDeck(id).play();
       await savePlaylistState();
     }
+  });
+
+  const rateSlider = id === 'a' ? el.deckARate      : el.deckBRate;
+  const rateReset  = id === 'a' ? el.deckARateReset : el.deckBRateReset;
+
+  rateSlider.addEventListener('input', (e) => {
+    _ensureAudio();
+    applyRate(id, parseFloat(e.target.value));
+  });
+
+  rateReset.addEventListener('click', () => {
+    applyRate(id, 1.0);
   });
 
   volSlider.addEventListener('input', (e) => {

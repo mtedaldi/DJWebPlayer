@@ -276,6 +276,16 @@ export function applyStaticStrings(APP_VERSION, el) {
   el.deckBStop.textContent  = t('deck.stop');
   el.deckBSkip.textContent  = t('deck.skip');
 
+  // Rate labels — set via app.js refs since ui.js doesn't hold them
+  const rateLabel = t('deck.rate');
+  const rateResetTitle = t('deck.rateReset');
+  for (const id of ['a', 'b']) {
+    const labelEl = document.getElementById(`deck-${id}-rate-label`);
+    const resetEl = document.getElementById(`deck-${id}-rate-reset`);
+    if (labelEl) labelEl.textContent = rateLabel;
+    if (resetEl) resetEl.title = rateResetTitle;
+  }
+
   el.loopBtn.textContent         = `🔁 ${t('deck.loop')}`;
   el.autoFadeBtn.textContent     = `⇌ ${t('crossfader.autoFade')}`;
   el.xfCenterBtn.textContent     = t('crossfader.center');

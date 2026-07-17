@@ -60,7 +60,7 @@
     <header class="app-header">
       <button id="burger-btn" class="burger-btn" aria-label="Open library">☰</button>
       <h1>DJWebPlayer</h1>
-      <button id="info-btn" class="info-btn" aria-label="About">ℹ v0.3.1</button>
+      <button id="info-btn" class="info-btn" aria-label="About">ℹ v0.4.0</button>
     </header>
 
     <main class="app-main">
@@ -87,6 +87,12 @@
             <span class="vol-label">Vol</span>
             <input id="deck-a-volume" type="range" min="0" max="1" step="0.01" value="0.8">
           </div>
+          <div class="deck-rate-row">
+            <span class="rate-label" id="deck-a-rate-label"></span>
+            <input id="deck-a-rate" type="range" min="0.8" max="1.2" step="0.01" value="1.0">
+            <span id="deck-a-rate-value" class="rate-value">0%</span>
+            <button id="deck-a-rate-reset" class="rate-reset" title="">↺</button>
+          </div>
         </section>
 
         <section class="deck-panel deck-b" aria-label="Deck B">
@@ -108,6 +114,12 @@
           <div class="deck-volume-row">
             <span class="vol-label">Vol</span>
             <input id="deck-b-volume" type="range" min="0" max="1" step="0.01" value="0.8">
+          </div>
+          <div class="deck-rate-row">
+            <span class="rate-label" id="deck-b-rate-label"></span>
+            <input id="deck-b-rate" type="range" min="0.8" max="1.2" step="0.01" value="1.0">
+            <span id="deck-b-rate-value" class="rate-value">0%</span>
+            <button id="deck-b-rate-reset" class="rate-reset" title="">↺</button>
           </div>
         </section>
       </div>

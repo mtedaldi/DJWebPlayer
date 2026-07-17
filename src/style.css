@@ -143,6 +143,38 @@ button:focus-visible, [tabindex]:focus-visible, input:focus-visible {
 }
 .deck-volume-row input[type="range"] { flex: 1; }
 
+.deck-rate-row {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.75rem; color: var(--color-text-dim);
+}
+.deck-rate-row input[type="range"] { flex: 1; }
+
+.rate-label { flex-shrink: 0; }
+
+.rate-value {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  min-width: 3rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+.deck-a .rate-value { color: var(--color-accent); }
+.deck-b .rate-value { color: var(--color-deck-b); }
+
+.rate-reset {
+  min-width: 28px; min-height: 28px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text-dim);
+  font-size: 0.9rem;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.rate-reset:hover { color: var(--color-text); border-color: var(--color-text-dim); }
+
 /* ── Crossfader ── */
 .crossfader-panel {
   flex-shrink: 0; background: var(--color-panel);

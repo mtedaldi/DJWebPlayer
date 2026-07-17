@@ -52,6 +52,8 @@ const STRINGS = {
     'deck.loop': 'Loop',
     'deck.noTrack': 'No track loaded',
     'deck.volume': 'Volume',
+    'deck.rate': 'Speed',
+    'deck.rateReset': 'Reset speed',
 
     'crossfader.label': 'Crossfader',
     'crossfader.toA': '← A',

@@ -45,6 +45,7 @@ class Deck {
     this.state          = DeckState.LOADING;
     this._buffer        = null;
     this._pauseOffset   = 0;
+    this._rate          = 1.0;   // reset rate on every new track load
     this.currentTrackId = trackId;
     this.trackName      = name;
 
@@ -61,6 +62,7 @@ class Deck {
 
     this._source        = this.ctx.createBufferSource();
     this._source.buffer = this._buffer;
+    this._source.playbackRate.value = this._rate || 1.0;
     this._source.connect(this.gainNode);
 
     this._source.onended = () => {
@@ -116,6 +118,14 @@ class Deck {
   setVolume(value) {
     this.gainNode.gain.value = Math.max(0, Math.min(1, value));
   }
+
+  /** Set playback rate (coupled speed+pitch). 1.0 = normal. */
+  setRate(value) {
+    this._rate = Math.max(0.5, Math.min(2.0, value));
+    if (this._source) this._source.playbackRate.value = this._rate;
+  }
+
+  get rate() { return this._rate || 1.0; }
 
   get isPlaying()   { return this.state === DeckState.PLAYING; }
   get isLoaded()    { return this.state !== DeckState.IDLE && this.state !== DeckState.LOADING; }
