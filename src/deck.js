@@ -137,6 +137,24 @@ class Deck {
     return this._pauseOffset;
   }
 
+  /**
+   * Track position in track-time (compensated for playback rate).
+   * At 1.2× a 3-minute track shows 0:00→3:00, not 0:00→2:30.
+   * Use this for display and for fade-trigger calculations.
+   */
+  get trackTime() {
+    return this.currentTime * (this._rate || 1.0);
+  }
+
+  /**
+   * Real-time remaining until track end, accounting for playback rate.
+   * Use this for fade-trigger threshold comparisons.
+   */
+  get remainingRealTime() {
+    const rate = this._rate || 1.0;
+    return (this.duration / rate) - this.currentTime;
+  }
+
   _startTick() {
     this._stopTick();
     this._tickInterval = setInterval(() => {

@@ -323,8 +323,9 @@ async function checkAutoFadeTrigger(deckId) {
   // Only trigger once per track.
   if (deckFadeState[deckId] !== FadeState.IDLE) return;
 
-  const remaining = deck.duration - deck.currentTime;
-  if (remaining > Math.max(fadeDuration, 1)) return;
+  // remainingRealTime accounts for playback rate, so the fade always
+  // starts fadeDuration real seconds before the track actually ends.
+  if (deck.remainingRealTime > Math.max(fadeDuration, 1)) return;
 
   // Determine the next track (peek — no advance yet).
   const trackToLoad = playlist.peekNext() ??
