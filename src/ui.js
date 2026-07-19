@@ -56,23 +56,20 @@ export function updateDeckUI(id) {
   if (!deck) return;
 
   const { autoFadeEnabled, fadeDuration } = _getState();
-  const dur      = deck.duration;
-  const rate     = deck.rate;
-  // Track-position (what the listener hears) for display
-  const trackPos = deck.trackTime;
-  // Real duration at current rate
-  const realDur  = rate > 0 ? dur / rate : dur;
-  const pct      = realDur > 0 ? (trackPos / realDur) * 100 : 0;
+  const dur = deck.duration;
+  const cur = deck.currentTime;  // Buffer-seconds = timecode
+  const pct = dur > 0 ? (cur / dur) * 100 : 0;
 
   e.fill.style.width     = `${pct}%`;
-  e.current.textContent  = formatTime(trackPos);
-  e.duration.textContent = formatTime(realDur);
+  e.current.textContent  = formatTime(cur);
+  e.duration.textContent = formatTime(dur);
   e.play.textContent     = deck.isPlaying ? t('deck.pause') : t('deck.play');
 
-  // Fade marker: position based on real-time remaining = fadeDuration
-  // i.e. marker at (realDur - fadeDuration) / realDur × 100%
-  if (autoFadeEnabled && realDur > 0 && fadeDuration > 0) {
-    const markerPct     = (Math.max(0, realDur - fadeDuration) / realDur) * 100;
+  // Fade marker in timecode-seconds: fadeDuration timecode-seconds before end.
+  // At 1.2× this means the fade starts slightly earlier in real time, which
+  // is acceptable (Option A: consistent timecode throughout).
+  if (autoFadeEnabled && dur > 0 && fadeDuration > 0) {
+    const markerPct     = (Math.max(0, dur - fadeDuration) / dur) * 100;
     e.marker.style.left = `${markerPct}%`;
     e.marker.hidden     = false;
   } else {
