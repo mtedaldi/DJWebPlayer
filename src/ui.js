@@ -280,13 +280,22 @@ export function applyStaticStrings(APP_VERSION, el) {
   el.deckBSkip.textContent  = t('deck.skip');
 
   // Rate labels — set via app.js refs since ui.js doesn't hold them
-  const rateLabel = t('deck.rate');
+  const rateLabel      = t('deck.rate');
   const rateResetTitle = t('deck.rateReset');
+  const decoupleLabel  = t('deck.decouple');
+  const pitchLabel     = t('deck.pitch');
+  const pitchResetTitle = t('deck.pitchReset');
   for (const id of ['a', 'b']) {
-    const labelEl = document.getElementById(`deck-${id}-rate-label`);
-    const resetEl = document.getElementById(`deck-${id}-rate-reset`);
-    if (labelEl) labelEl.textContent = rateLabel;
-    if (resetEl) resetEl.title = rateResetTitle;
+    const labelEl    = document.getElementById(`deck-${id}-rate-label`);
+    const resetEl    = document.getElementById(`deck-${id}-rate-reset`);
+    const decoupleEl = document.getElementById(`deck-${id}-decouple`);
+    const pitchLabelEl = document.getElementById(`deck-${id}-pitch-label`);
+    const pitchResetEl = document.getElementById(`deck-${id}-pitch-reset`);
+    if (labelEl)     labelEl.textContent     = rateLabel;
+    if (resetEl)     resetEl.title           = rateResetTitle;
+    if (decoupleEl)  decoupleEl.textContent  = decoupleLabel;
+    if (pitchLabelEl) pitchLabelEl.textContent = pitchLabel;
+    if (pitchResetEl) pitchResetEl.title      = pitchResetTitle;
   }
 
   el.loopBtn.textContent         = `🔁 ${t('deck.loop')}`;

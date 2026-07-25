@@ -4,7 +4,7 @@
  * live in IndexedDB (see storage.js), not in this cache.
  */
 
-const CACHE_NAME = 'djwebplayer-shell-v9';
+const CACHE_NAME = 'djwebplayer-shell-v10';
 
 const SHELL_FILES = [
   './',
@@ -18,6 +18,10 @@ const SHELL_FILES = [
   './deck.js',
   './playlist.js',
   './manifest.json',
+  './vendor/SoundTouchNode.js',
+  './vendor/soundtouch-processor.js',
+  './vendor/constants.js',
+  './vendor/processOffline.js',
 ];
 
 self.addEventListener('install', (event) => {

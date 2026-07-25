@@ -54,6 +54,9 @@ const STRINGS = {
     'deck.volume': 'Volume',
     'deck.rate': 'Speed',
     'deck.rateReset': 'Reset speed',
+    'deck.decouple': 'Decouple',
+    'deck.pitch': 'Pitch',
+    'deck.pitchReset': 'Reset pitch',
 
     'crossfader.label': 'Crossfader',
     'crossfader.toA': '← A',

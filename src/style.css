@@ -149,6 +149,23 @@ button:focus-visible, [tabindex]:focus-visible, input:focus-visible {
 }
 .deck-rate-row input[type="range"] { flex: 1; }
 
+.deck-pitch-row {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.75rem; color: var(--color-text-dim);
+}
+.deck-pitch-row input[type="range"] { flex: 1; }
+.deck-pitch-row[hidden] { display: none; }
+
+.decouple-btn {
+  min-width: unset;
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  min-height: 24px;
+}
+.deck-a .decouple-btn.is-active { border-color: var(--color-accent); color: var(--color-accent); }
+.deck-b .decouple-btn.is-active { border-color: var(--color-deck-b); color: var(--color-deck-b); }
+
 .rate-label { flex-shrink: 0; }
 
 .rate-value {

@@ -26,7 +26,7 @@ import {
 
 // ---- Constants ----
 
-const APP_VERSION = '0.4.0';
+const APP_VERSION = '0.4.1';
 
 // ---- State ----
 
@@ -77,6 +77,12 @@ const el = {
   deckARateVal:  document.getElementById('deck-a-rate-value'),
   deckARateReset: document.getElementById('deck-a-rate-reset'),
   deckARateLabel: document.getElementById('deck-a-rate-label'),
+  deckADecouple:  document.getElementById('deck-a-decouple'),
+  deckAPitchRow:  document.getElementById('deck-a-pitch-row'),
+  deckAPitch:     document.getElementById('deck-a-pitch'),
+  deckAPitchVal:  document.getElementById('deck-a-pitch-value'),
+  deckAPitchReset: document.getElementById('deck-a-pitch-reset'),
+  deckAPitchLabel: document.getElementById('deck-a-pitch-label'),
 
   deckBLabel:    document.getElementById('deck-b-label'),
   deckBTrack:    document.getElementById('deck-b-track'),
@@ -93,6 +99,12 @@ const el = {
   deckBRateVal:  document.getElementById('deck-b-rate-value'),
   deckBRateReset: document.getElementById('deck-b-rate-reset'),
   deckBRateLabel: document.getElementById('deck-b-rate-label'),
+  deckBDecouple:  document.getElementById('deck-b-decouple'),
+  deckBPitchRow:  document.getElementById('deck-b-pitch-row'),
+  deckBPitch:     document.getElementById('deck-b-pitch'),
+  deckBPitchVal:  document.getElementById('deck-b-pitch-value'),
+  deckBPitchReset: document.getElementById('deck-b-pitch-reset'),
+  deckBPitchLabel: document.getElementById('deck-b-pitch-label'),
 
   crossfader:         document.getElementById('crossfader'),
   xfLabelA:           document.getElementById('xf-label-a'),
@@ -276,8 +288,9 @@ async function loadTrackOnDeck(deckId, trackId) {
   if (!blob) return;
   const meta = library.find((tr) => tr.id === trackId);
   await getDeck(deckId).load(trackId, blob, meta ? displayName(meta) : '');
-  // deck.load() resets _rate to 1.0; sync the UI slider too
+  // deck.load() resets _rate and _pitch to defaults; sync UI sliders too
   applyRate(deckId, 1.0);
+  applyPitch(deckId, 0);
   resetFadeState(deckId);
   updateDeckUI(deckId);
   refreshRenderPlaylist(false);
@@ -555,23 +568,43 @@ function formatRate(value) {
   return pct === 0 ? '0%' : (pct > 0 ? `+${pct}%` : `${pct}%`);
 }
 
+function formatPitch(semitones) {
+  if (semitones === 0) return '0 st';
+  return (semitones > 0 ? `+${semitones}` : `${semitones}`) + ' st';
+}
+
 function applyRate(deckId, value) {
-  const deck      = getDeck(deckId);
+  const deck       = getDeck(deckId);
   const rateSlider = deckId === 'a' ? el.deckARate    : el.deckBRate;
   const rateVal    = deckId === 'a' ? el.deckARateVal : el.deckBRateVal;
   if (deck) deck.setRate(value);
-  rateSlider.value      = String(value);
-  rateVal.textContent   = formatRate(value);
+  rateSlider.value    = String(value);
+  rateVal.textContent = formatRate(value);
+}
+
+function applyPitch(deckId, semitones) {
+  const deck       = getDeck(deckId);
+  const pitchSlider = deckId === 'a' ? el.deckAPitch    : el.deckBPitch;
+  const pitchVal    = deckId === 'a' ? el.deckAPitchVal : el.deckBPitchVal;
+  if (deck) deck.setPitch(semitones);
+  pitchSlider.value   = String(semitones);
+  pitchVal.textContent = formatPitch(semitones);
 }
 
 // ---- Event listeners: deck controls ----
 
 function wireDeckControls(id) {
-  const playBtn   = id === 'a' ? el.deckAPlay   : el.deckBPlay;
-  const stopBtn   = id === 'a' ? el.deckAStop   : el.deckBStop;
-  const skipBtn   = id === 'a' ? el.deckASkip   : el.deckBSkip;
-  const volSlider = id === 'a' ? el.deckAVolume : el.deckBVolume;
-  const progressEl = id === 'a' ? el.deckAProgress : el.deckBProgress;
+  const playBtn    = id === 'a' ? el.deckAPlay      : el.deckBPlay;
+  const stopBtn    = id === 'a' ? el.deckAStop      : el.deckBStop;
+  const skipBtn    = id === 'a' ? el.deckASkip      : el.deckBSkip;
+  const volSlider  = id === 'a' ? el.deckAVolume    : el.deckBVolume;
+  const progressEl = id === 'a' ? el.deckAProgress  : el.deckBProgress;
+  const rateSlider = id === 'a' ? el.deckARate      : el.deckBRate;
+  const rateReset  = id === 'a' ? el.deckARateReset : el.deckBRateReset;
+  const decoupleBtn = id === 'a' ? el.deckADecouple  : el.deckBDecouple;
+  const pitchRow   = id === 'a' ? el.deckAPitchRow  : el.deckBPitchRow;
+  const pitchSlider = id === 'a' ? el.deckAPitch     : el.deckBPitch;
+  const pitchReset = id === 'a' ? el.deckAPitchReset : el.deckBPitchReset;
 
   playBtn.addEventListener('click', async () => {
     _ensureAudio();
@@ -605,9 +638,6 @@ function wireDeckControls(id) {
     }
   });
 
-  const rateSlider = id === 'a' ? el.deckARate      : el.deckBRate;
-  const rateReset  = id === 'a' ? el.deckARateReset : el.deckBRateReset;
-
   rateSlider.addEventListener('input', (e) => {
     _ensureAudio();
     applyRate(id, parseFloat(e.target.value));
@@ -615,6 +645,27 @@ function wireDeckControls(id) {
 
   rateReset.addEventListener('click', () => {
     applyRate(id, 1.0);
+  });
+
+  decoupleBtn.addEventListener('click', async () => {
+    _ensureAudio();
+    const deck = getDeck(id);
+    if (!deck) return;
+    await deck.setDecoupled(!deck.isDecoupled);
+    decoupleBtn.classList.toggle('is-active', deck.isDecoupled);
+    pitchRow.hidden = !deck.isDecoupled;
+    // Reset pitch UI when disabling
+    if (!deck.isDecoupled) {
+      applyPitch(id, 0);
+    }
+  });
+
+  pitchSlider.addEventListener('input', (e) => {
+    applyPitch(id, parseFloat(e.target.value));
+  });
+
+  pitchReset.addEventListener('click', () => {
+    applyPitch(id, 0);
   });
 
   volSlider.addEventListener('input', (e) => {

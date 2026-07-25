@@ -60,7 +60,7 @@
     <header class="app-header">
       <button id="burger-btn" class="burger-btn" aria-label="Open library">☰</button>
       <h1>DJWebPlayer</h1>
-      <button id="info-btn" class="info-btn" aria-label="About">ℹ v0.4.0</button>
+      <button id="info-btn" class="info-btn" aria-label="About">ℹ v0.4.1</button>
     </header>
 
     <main class="app-main">
@@ -92,6 +92,13 @@
             <input id="deck-a-rate" type="range" min="0.8" max="1.2" step="0.01" value="1.0">
             <span id="deck-a-rate-value" class="rate-value">0%</span>
             <button id="deck-a-rate-reset" class="rate-reset" title="">↺</button>
+            <button id="deck-a-decouple" class="btn-toggle decouple-btn" title=""></button>
+          </div>
+          <div class="deck-pitch-row" id="deck-a-pitch-row" hidden>
+            <span class="rate-label" id="deck-a-pitch-label"></span>
+            <input id="deck-a-pitch" type="range" min="-6" max="6" step="0.5" value="0">
+            <span id="deck-a-pitch-value" class="rate-value">0 st</span>
+            <button id="deck-a-pitch-reset" class="rate-reset" title="">↺</button>
           </div>
         </section>
 
@@ -120,6 +127,13 @@
             <input id="deck-b-rate" type="range" min="0.8" max="1.2" step="0.01" value="1.0">
             <span id="deck-b-rate-value" class="rate-value">0%</span>
             <button id="deck-b-rate-reset" class="rate-reset" title="">↺</button>
+            <button id="deck-b-decouple" class="btn-toggle decouple-btn" title=""></button>
+          </div>
+          <div class="deck-pitch-row" id="deck-b-pitch-row" hidden>
+            <span class="rate-label" id="deck-b-pitch-label"></span>
+            <input id="deck-b-pitch" type="range" min="-6" max="6" step="0.5" value="0">
+            <span id="deck-b-pitch-value" class="rate-value">0 st</span>
+            <button id="deck-b-pitch-reset" class="rate-reset" title="">↺</button>
           </div>
         </section>
       </div>
