@@ -9,7 +9,6 @@ import { t } from './i18n.js';
 
 // State references set by init()
 let _library    = null;
-let _playlist   = null;
 let _getDeck    = null;
 let _el         = null;
 let _getState   = null; // () => { autoFadeEnabled, fadeDuration, loopEnabled }
@@ -17,7 +16,6 @@ let _onAction   = null; // { onLibraryAction, onPlaylistAction, onDeckAction }
 
 export function init(refs) {
   _library   = refs.library;
-  _playlist  = refs.playlist;
   _getDeck   = refs.getDeck;
   _el        = refs.el;
   _getState  = refs.getState;
@@ -26,7 +24,7 @@ export function init(refs) {
 
 // ---- Helpers ----
 
-export function formatTime(s) {
+function formatTime(s) {
   if (!isFinite(s) || s < 0) s = 0;
   const m = Math.floor(s / 60);
   return `${m}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -42,7 +40,7 @@ function findTrackMeta(trackId) {
 
 // ---- Deck UI ----
 
-export function deckEls(id) {
+function deckEls(id) {
   return id === 'a'
     ? { track: _el.deckATrack, fill: _el.deckAFill, current: _el.deckACurrent,
         duration: _el.deckADuration, play: _el.deckAPlay, marker: _el.deckAMarker }
@@ -88,7 +86,7 @@ export function updateDeckUI(id) {
 
 // ---- Library ----
 
-export function updateSortHeaders(sortKey, sortAsc) {
+function updateSortHeaders(sortKey, sortAsc) {
   const arrow = sortAsc ? ' ▲' : ' ▼';
   _el.thName.textContent     = t('library.colName')     + (sortKey === 'name'     ? arrow : '');
   _el.thDuration.textContent = t('library.colDuration') + (sortKey === 'duration' ? arrow : '');
@@ -96,7 +94,7 @@ export function updateSortHeaders(sortKey, sortAsc) {
   _el.thDuration.classList.toggle('is-sorted', sortKey === 'duration');
 }
 
-export function updateBulkBar(selectedIds, visibleTracks) {
+function updateBulkBar(selectedIds, visibleTracks) {
   _el.libraryRemoveSelected.disabled = selectedIds.size === 0;
   const allSelected = visibleTracks.length > 0 &&
     visibleTracks.every((tr) => selectedIds.has(tr.id));

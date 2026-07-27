@@ -5,6 +5,10 @@
  * language. Adding a new language means adding a new key to STRINGS
  * and implementing language detection/selection — no structural changes
  * to the rest of the app are needed.
+ *
+ * setLanguage() and getLanguage() are intentionally kept but not yet
+ * wired to any UI — they are the foundation for future language
+ * switching (e.g. German). See roadmap backlog.
  */
 
 const STRINGS = {
@@ -19,9 +23,6 @@ const STRINGS = {
     'library.search': 'Search library…',
     'library.colName': 'Title',
     'library.colDuration': 'Duration',
-    'library.sortName': 'Name',
-    'library.sortDate': 'Date added',
-    'library.sortDuration': 'Duration',
     'library.selectAll': 'Select all',
     'library.deselectAll': 'Deselect all',
     'library.removeSelected': 'Remove selected',
@@ -39,7 +40,7 @@ const STRINGS = {
     'playlist.remove': 'Remove',
     'playlist.moveUp': 'Move up',
     'playlist.moveDown': 'Move down',
-    'playlist.nowPlaying': 'Now playing',
+    'playlist.nowPlaying': 'Now playing', // reserved for future status display
     'playlist.clear': 'Clear playlist',
     'playlist.clearConfirm': 'Remove all tracks from the playlist? This cannot be undone.',
 
@@ -51,7 +52,6 @@ const STRINGS = {
     'deck.skip': 'Skip',
     'deck.loop': 'Loop',
     'deck.noTrack': 'No track loaded',
-    'deck.volume': 'Volume',
     'deck.rate': 'Speed',
     'deck.rateReset': 'Reset speed',
     'deck.decouple': 'Decouple',
@@ -62,7 +62,6 @@ const STRINGS = {
     'crossfader.toA': '← A',
     'crossfader.toB': 'B →',
     'crossfader.center': 'Center',
-    'crossfader.auto': 'Auto',
     'crossfader.autoFade': 'Auto-fade',
     'crossfader.fadeDuration': 'Fade',
 
@@ -78,7 +77,7 @@ const STRINGS = {
     'danger.resetConfirm': 'This will permanently delete your entire library, playlist, and all app data, then reload the app. This cannot be undone. Continue?',
     'danger.resetting': 'Resetting…',
 
-    'common.loading': 'Loading…',
+    'common.loading': 'Loading…', // reserved for future import progress display
     'common.error': 'Something went wrong',
     'common.cancel': 'Cancel',
     'common.confirm': 'Confirm',
@@ -106,14 +105,17 @@ function t(key, params) {
   return str;
 }
 
+/**
+ * Switch the active language. No-op if the language has no entry in
+ * STRINGS. Wire this to a settings UI when adding language support.
+ */
 function setLanguage(lang) {
-  if (STRINGS[lang]) {
-    currentLang = lang;
-  }
+  if (STRINGS[lang]) currentLang = lang;
 }
 
+/** Returns the currently active language code (e.g. 'en'). */
 function getLanguage() {
   return currentLang;
 }
 
-export { t };
+export { t, setLanguage, getLanguage };

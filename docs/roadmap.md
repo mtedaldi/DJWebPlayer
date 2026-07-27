@@ -91,27 +91,68 @@ order relative to v0.2+.
 
 ---
 
-## v0.3 — Automatic crossfade for playlist mode
+## v0.3 — Automatic crossfade for playlist mode ✓
 
-- Configurable automatic crossfade duration
-- Playlist mode now alternates the *next* track into the free deck and
-  crossfades automatically near the end of the current track, instead of a
-  hard cut
-- Manual crossfade override remains available at any time
+- Auto-crossfade toggle (⇌) with configurable fade duration (0–15s slider,
+  default 10s), persisted across reloads
+- Equal-power gain ramps via Web Audio API (frame-accurate); UI crossfader
+  slider animated in real time via requestAnimationFrame
+- Fade triggers on dominant deck (crossfader position) only, at
+  (duration − fadeDuration) seconds before track end
+- Next track post-loaded silently onto free deck after each fade completes,
+  ready for next transition without loading delay
+- Visual fade-trigger marker on progress bar (coloured line + triangle)
+- Both decks pre-loaded on playlist init/restore
+- FadeState machine (idle/fading-out/fading-in/done) ensures playlist
+  advance happens exactly once per fade, in onComplete
+- Manual crossfade always available; manuelly loaded tracks on free deck
+  are respected (not overwritten by auto-fade)
 
-**Goal:** Playlist mode runs unattended with smooth transitions.
+**Known issue (v0.3.1):** If a track is manually loaded onto the free deck
+before a fade, the playlist index can drift — the post-fade pre-load may
+land on the wrong track. Root cause: manual load doesn't update
+`playlist.currentIndex`. Planned fix: deck ownership model (auto vs manual)
+in a future version.
+
+**Goal:** Playlist mode runs unattended with smooth transitions. ✓
 
 ---
 
-## v0.4 — Speed and pitch control
+## v0.3.x — Deck ownership model (planned bugfix)
 
-- Coupled speed/pitch (native `playbackRate`) per deck
-- Decoupled speed/pitch (time-stretch via SoundTouchJS or equivalent) per
-  deck, toggle between modes
-- Sensible default ranges, exposed as sliders
+- Introduce `auto` / `manual` ownership per deck
+- Manual load sets ownership=manual; auto-fade skips advance for manual decks
+- Fixes post-fade pre-load landing on wrong track after manual intervention
+
+---
+
+## v0.4 — Speed and pitch control ✓
+
+### v0.4.0 — Coupled speed/pitch ✓
+- Speed slider per deck (±20%, 0.8×–1.2×), always visible
+- Native `AudioBufferSourceNode.playbackRate` — changes speed and pitch
+  together (vinyl-style)
+- Live percentage display in deck accent colour; reset button (↺)
+- Rate resets to 1.0× on every track load (no accidental carry-over)
+
+### v0.4.1 — Decoupled pitch/speed ✓
+- @soundtouchjs/audio-worklet v2.1.0 vendored locally in `src/vendor/`
+  (no CDN, fully offline)
+- Per-deck Decouple toggle; pitch slider (±6 semitones) appears only
+  when decouple is active
+- Speed changes tempo only; pitch slider controls tonality independently
+- Pitch can be changed live; speed change restarts source at current
+  timecode position (AudioBufferSourceNode constraint)
+- Time model: timecode throughout (buffer-seconds); fade trigger and
+  progress bar use timecode regardless of playback rate (Option A)
+
+**Note — time model (Option A):** All timing uses buffer-seconds
+(timecode). At ±20% rate the fade trigger fires up to ±2 timecode-
+seconds off the configured fade duration. A future correction
+(`fadeDuration × rate`) is trivial but not yet implemented.
 
 **Goal:** Tempo/pitch adjustable per deck, with a real choice between
-"vinyl-style" and independent pitch shifting.
+"vinyl-style" and independent pitch shifting. ✓
 
 ---
 

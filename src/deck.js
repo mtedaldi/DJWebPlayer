@@ -26,16 +26,17 @@ const DeckState = Object.freeze({
 
 // SoundTouchNode is imported lazily when decouple mode is first enabled,
 // so it doesn't block startup if the vendor file has any issue.
-let _SoundTouchNode       = null;
-let _stProcessorRegistered = false;
+// The processor is registered on the AudioContext object itself
+// (ctx.__stRegistered) so it's scoped to the context, not globally.
+let _SoundTouchNode = null;
 
 async function ensureSoundTouch(audioCtx) {
   if (_SoundTouchNode) return _SoundTouchNode;
   const mod = await import('./vendor/SoundTouchNode.js');
   _SoundTouchNode = mod.SoundTouchNode;
-  if (!_stProcessorRegistered) {
+  if (!audioCtx.__stRegistered) {
     await _SoundTouchNode.register(audioCtx, './vendor/soundtouch-processor.js');
-    _stProcessorRegistered = true;
+    audioCtx.__stRegistered = true;
   }
   return _SoundTouchNode;
 }

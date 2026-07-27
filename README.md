@@ -11,7 +11,7 @@ server required.
 
 ## Status
 
-Active development — **v0.3.1** is the current release. See
+Active development — **v0.4.1** is the current release. See
 [Roadmap](docs/roadmap.md) for what's next.
 
 ## Features (current)
@@ -30,6 +30,9 @@ Active development — **v0.3.1** is the current release. See
 - Post-fade pre-load: next track silently loaded onto free deck after
   each fade, ready for next transition
 - Both decks pre-loaded on playlist init
+- **Speed control per deck** (±20%, coupled speed+pitch)
+- **Decoupled pitch/speed** via SoundTouchJS (vendored locally):
+  speed changes tempo only, independent pitch slider ±6 semitones
 - Fully offline after first load, installable as PWA
 
 ## Features (planned, see roadmap for version breakdown)

@@ -93,12 +93,19 @@ and a soundboard for sound effects.
 ### 3.4 Speed and pitch
 
 - FR-4.1: Coupled speed/pitch mode (native `playbackRate`): changing speed
-  changes pitch proportionally (vinyl/tape-style)
+  changes pitch proportionally (vinyl/tape-style). Range: ±20% (0.8×–1.2×).
+  Implemented as v0.4.0.
 - FR-4.2: Decoupled mode: speed and pitch can be changed independently
-  (time-stretching via phase vocoder, e.g. SoundTouchJS)
+  via @soundtouchjs/audio-worklet (vendored locally in `src/vendor/`).
+  Speed range: ±20%. Pitch range: ±6 semitones. Implemented as v0.4.1.
 - FR-4.3: User can switch between coupled and decoupled mode per deck
-- FR-4.4: Reasonable adjustment range (e.g. speed: 50–150%, pitch: ±6
-  semitones), exact bounds to be refined during implementation
+  via a toggle button; pitch slider appears only when decoupled is active.
+- FR-4.4: Rate and pitch reset to defaults (1.0×, 0 semitones) on every
+  track load to prevent accidental carry-over.
+- FR-4.5: Time model — all timing uses buffer-seconds (timecode). At rates
+  != 1.0 the fade trigger may fire slightly off the configured duration
+  (Option A, acceptable trade-off for simplicity). Future correction via
+  `fadeDuration × rate` is planned but not yet implemented.
 
 ### 3.5 Soundboard
 
@@ -179,4 +186,5 @@ and a soundboard for sound effects.
 
 - Mixxx (github.com/mixxxdj/mixxx) — feature inspiration, native desktop DJ
   software; not a dependency or basis for this project
-- SoundTouchJS — candidate library for decoupled pitch/speed shifting
+- SoundTouchJS — @soundtouchjs/audio-worklet v2.1.0, used for decoupled
+  pitch/speed in v0.4.1; vendored locally in `src/vendor/` (MPL-2.0)
