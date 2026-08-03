@@ -158,11 +158,24 @@ seconds off the configured fade duration. A future correction
 
 ## v0.5 — Soundboard
 
-- Configurable sound effect buttons (applause, horn, cheering, etc.)
-- User can upload/assign/rename/delete custom sounds
-- Independent volume control for soundboard output
-- Polyphonic playback (multiple effects can overlap)
-- Sounds persisted in IndexedDB for offline use
+Design decisions:
+- 2×3 grid (6 buttons), fixed for now, expandable later
+- Collapsible panel (toggle button in header)
+- Built-in default sounds + user-uploadable sounds
+- Sound-library picker for assignment (similar to music library)
+- Optional music ducking (off by default)
+- Attribution for CC-BY sounds in About dialog and docs/sound-credits.md
+
+Implementation plan:
+- `src/sounds/` — 6 bundled default sounds (see docs/sound-credits.md)
+- New `soundboard.js` module: GainNode, one-shot playback, ducking logic
+- New IndexedDB store `sounds` for user-uploaded sounds
+- UI: collapsible panel below crossfader; sound-library picker modal
+- Each button: label (editable), assigned sound, trigger animation
+
+Milestones:
+- v0.5.0: Panel, 6 buttons, built-in sounds, volume, polyphonic playback
+- v0.5.1: User sound upload + library picker, label editing, ducking
 
 **Goal:** Live sound effects available alongside music playback.
 

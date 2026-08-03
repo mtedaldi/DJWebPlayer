@@ -109,14 +109,32 @@ and a soundboard for sound effects.
 
 ### 3.5 Soundboard
 
-- FR-5.1: User-configurable buttons that trigger one-shot sound playback
-  (e.g. applause, horn, cheering)
-- FR-5.2: User can upload/assign their own audio files to soundboard buttons
-- FR-5.3: User can label/rename buttons
-- FR-5.4: Soundboard sounds are stored locally (IndexedDB) for offline reuse
-- FR-5.5: Soundboard playback has independent volume control, separate from
-  deck output
-- FR-5.6: Multiple soundboard sounds can overlap (polyphonic playback)
+Design decisions (finalised):
+- Fixed 2×3 grid (6 buttons); expandable in a later version
+- Each button triggers one-shot, polyphonic playback
+- Built-in default sounds + user-uploadable sounds
+- Soundboard is a collapsible/toggle panel (not always visible)
+- Optional music ducking toggle (off by default)
+- Sound assignment via a sound-library picker (similar to music library)
+
+- FR-5.1: Soundboard panel is collapsible; a toggle button in the header
+  shows/hides it
+- FR-5.2: 6 buttons in a 2×3 grid, each independently configurable
+- FR-5.3: Each button triggers one-shot playback of its assigned sound;
+  multiple buttons can play simultaneously (polyphonic)
+- FR-5.4: Built-in default sounds bundled in `src/sounds/`:
+  Applause, Bah-dum-tss, Horn, Bell, Drumroll, Laughter.
+  Sources and licenses documented in `docs/sound-credits.md`.
+  CC-BY authors credited in About dialog.
+- FR-5.5: User can assign their own audio files to any button via a
+  sound-library picker (upload + select, similar to music library)
+- FR-5.6: User can label/rename each button
+- FR-5.7: Soundboard sounds stored in IndexedDB for offline reuse
+- FR-5.8: Soundboard has its own gain/volume control, independent of decks
+- FR-5.9: Optional music ducking: when active, deck master gain is
+  temporarily reduced while a soundboard sound plays; off by default;
+  toggle in soundboard panel header
+- FR-5.10: Button state feedback — brief visual highlight on trigger
 
 ### 3.6 Audio output
 
